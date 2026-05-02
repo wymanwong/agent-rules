@@ -28,10 +28,10 @@ export function createApp(db) {
     ok(res, { status: "ok", uptime_ms: Date.now() - started });
   });
 
-  app.get("/api/v1/health/ready", (_req, res) => {
+  app.get("/api/v1/health/ready", async (_req, res) => {
     try {
-      db.prepare(`SELECT 1`).get();
-      ok(res, { status: "ready", database: "ok" });
+      await db.query(`SELECT 1`);
+      ok(res, { status: "ready", database: "postgresql" });
     } catch {
       res.status(503).json({ success: false, error: { code: "NOT_READY", message: "Database unavailable" } });
     }
@@ -49,6 +49,14 @@ export function createApp(db) {
   v1.use("/tickets", ticketsRouter(db));
 
   app.use("/api/v1", v1);
+
+  app.use((err, _req, res, _next) => {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      error: { code: "INTERNAL_ERROR", message: err.message || "Server error" },
+    });
+  });
 
   const publicDir = path.join(__dirname, "..", "public");
   app.use(express.static(publicDir));
