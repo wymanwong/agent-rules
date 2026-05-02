@@ -23,10 +23,16 @@
   </noscript>
   <div id="boot-static" class="boot-hint">
     <p><strong>IT Helpdesk</strong> — loading interface…</p>
-    <p>If this message stays forever: open DevTools (F12) → Console for errors. Use URL <code>http://localhost:3840/</code> (same machine as <code>npm start</code>).</p>
+    <p><strong>Same PC:</strong> <code>http://localhost:&lt;PORT&gt;/</code> (default PORT from terminal when you run <code>npm start</code>).</p>
+    <p><strong>Phone or another computer:</strong> use <strong>this machine’s LAN IP</strong>, e.g. <code>http://192.168.x.x:&lt;PORT&gt;/</code>. Do <em>not</em> use <code>localhost</code> there — localhost always means “this phone/PC”, not your server PC.</p>
+    <p>If this message stays forever: F12 → Console. If the page is <em>white</em>, you are probably not hitting this server.</p>
     <p id="boot-error" aria-live="polite"></p>
   </div>
   <div id="app"></div>
+  <script nomodule>
+    document.getElementById("boot-error").textContent =
+      "This browser does not support JavaScript modules (ES modules). Use a current Chrome, Edge, Firefox, or Safari.";
+  </script>
   <script type="module" src="/app.js"></script>
 </body>
 </html>
