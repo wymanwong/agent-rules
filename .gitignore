@@ -5,3 +5,4 @@
 ticketing-system/node_modules/
 ticketing-system/data/*.db
 ticketing-system/data/*.db-*
+ticketing-system/data/uploads/
