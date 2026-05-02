@@ -38,6 +38,7 @@ export function registerRoutes(app: Express, db: Database): void {
     if (req.user?.role === 'Admin') return catalog.listAll(req, res);
     return catalog.listPublished(req, res);
   });
+  api.get('/catalog/items/:id', authorize('Admin'), catalog.getById.bind(catalog));
 
   api.post('/catalog/items', authorize('Admin'), catalog.create.bind(catalog));
   api.patch('/catalog/items/:id', authorize('Admin'), catalog.update.bind(catalog));

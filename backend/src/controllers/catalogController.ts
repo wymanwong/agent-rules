@@ -6,7 +6,7 @@ import * as catalogRepo from '../repositories/catalogRepository.js';
 import * as userRepo from '../repositories/userRepository.js';
 import * as approvalRepo from '../repositories/approvalRepository.js';
 import { createTicket } from '../services/ticketService.js';
-import type { Impact, Urgency } from '../models/types.js';
+import type { Impact, Priority, Urgency } from '../models/types.js';
 
 export function createCatalogController(db: Database) {
   return {
@@ -18,6 +18,13 @@ export function createCatalogController(db: Database) {
     listAll: (_req: AuthRequest, res: Response): void => {
       const items = catalogRepo.listAll(db);
       res.json({ items });
+    },
+
+    getById: (req: AuthRequest, res: Response): void => {
+      const id = Number(req.params.id);
+      const item = catalogRepo.findById(db, id);
+      if (!item) throw new HttpError(404, 'Catalog item not found');
+      res.json({ item });
     },
 
     create: (req: AuthRequest, res: Response): void => {
@@ -96,6 +103,11 @@ export function createCatalogController(db: Database) {
         status = 'AwaitingApproval';
       }
 
+      const catalogPriority =
+        item.default_priority && ['P1', 'P2', 'P3', 'P4'].includes(item.default_priority)
+          ? (item.default_priority as Priority)
+          : undefined;
+
       const ticket = createTicket(
         db,
         {
@@ -104,6 +116,7 @@ export function createCatalogController(db: Database) {
           type: 'ServiceRequest',
           impact,
           urgency,
+          ...(catalogPriority !== undefined ? { priority: catalogPriority } : {}),
           category: item.default_category ?? undefined,
           subcategory: item.default_subcategory ?? undefined,
           source: 'Portal',

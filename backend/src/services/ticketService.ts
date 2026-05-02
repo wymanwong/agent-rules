@@ -55,12 +55,14 @@ export function createTicket(
     ticket_extra_json?: string | null;
     status?: string;
     department?: string | null;
+    /** When set (e.g. catalog default), overrides impact×urgency matrix for priority and SLA */
+    priority?: Priority;
   },
   requesterId: number,
   requesterDepartment: string | null,
 ): ticketRepo.TicketRow {
   const now = new Date().toISOString();
-  const priority = computePriority(input.impact, input.urgency);
+  const priority = input.priority ?? computePriority(input.impact, input.urgency);
   const dueAt = computeDueAtIso(new Date(), priority);
   const status = input.status ?? 'New';
 

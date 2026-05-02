@@ -37,6 +37,7 @@ export function AppLayout() {
     { label: 'My Requests', to: '/my-requests', show: !!user },
     { label: 'IT Queue', to: '/it/queue', show: !!user && (user.role === 'IT' || user.role === 'Admin') },
     { label: 'Admin', to: '/admin', show: !!user && user.role === 'Admin' },
+    { label: 'Catalog admin', to: '/admin/catalog', show: !!user && user.role === 'Admin' },
   ].filter((i) => i.show);
 
   const drawer = (
@@ -126,9 +127,14 @@ export function AppLayout() {
                     </Button>
                   )}
                   {user.role === 'Admin' && (
-                    <Button color="inherit" component={RouterLink} to="/admin">
-                      Admin
-                    </Button>
+                    <>
+                      <Button color="inherit" component={RouterLink} to="/admin">
+                        Admin
+                      </Button>
+                      <Button color="inherit" component={RouterLink} to="/admin/catalog" sx={{ display: { xs: 'none', lg: 'inline-flex' } }}>
+                        Catalog
+                      </Button>
+                    </>
                   )}
                   <Typography variant="body2" sx={{ opacity: 0.9, display: { xs: 'none', lg: 'block' } }}>
                     {user.name} ({user.role})

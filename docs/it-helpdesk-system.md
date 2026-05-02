@@ -44,7 +44,7 @@ Password for all: `password123`
 
 - **Knowledge GET** `/knowledge/articles` and `/knowledge/articles/:id` are public for published articles; optional JWT unlocks unpublished listing for Admin.
 - **Tickets**: `POST /tickets` creates incidents or requests; ticket number `IT-######` is set after insert.
-- **Catalog**: `POST /catalog/items/:id/requests` creates a service request; optional approval uses first Admin as approver when `requires_manager_approval` is set.
+- **Catalog**: Admin UI lives at `/admin/catalog` (list + configure). **GET** `/catalog/items/:id` (Admin JWT) loads one item for editing. **POST** `/catalog/items/:id/requests` creates a service request; if `default_priority` is set on the item it overrides impact×urgency for ticket priority and SLA; optional approval uses first Admin as approver when `requires_manager_approval` is set.
 
 ## Tests
 

@@ -15,6 +15,8 @@ import { KnowledgeListPage } from './pages/KnowledgeListPage';
 import { KnowledgeDetailPage } from './pages/KnowledgeDetailPage';
 import { ITQueuePage } from './pages/ITQueuePage';
 import { AdminPage } from './pages/AdminPage';
+import { AdminCatalogListPage } from './pages/admin/AdminCatalogListPage';
+import { AdminCatalogConfigurePage } from './pages/admin/AdminCatalogConfigurePage';
 
 export default function App() {
   return (
@@ -89,6 +91,30 @@ export default function App() {
                 element={
                   <ProtectedRoute roles={['Admin']}>
                     <AdminPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="admin/catalog"
+                element={
+                  <ProtectedRoute roles={['Admin']}>
+                    <AdminCatalogListPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="admin/catalog/new"
+                element={
+                  <ProtectedRoute roles={['Admin']}>
+                    <AdminCatalogConfigurePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="admin/catalog/:catalogId"
+                element={
+                  <ProtectedRoute roles={['Admin']}>
+                    <AdminCatalogConfigurePage />
                   </ProtectedRoute>
                 }
               />
