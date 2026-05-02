@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IconFilter } from '@tabler/icons-react';
 import { api } from '../api';
+
+const SEARCH_DEBOUNCE_MS = 400;
 
 interface TicketRow {
   id: number;
@@ -23,24 +25,32 @@ export function MyRequestsPage() {
   const [createdFrom, setCreatedFrom] = useState('');
   const [createdTo, setCreatedTo] = useState('');
   const [search, setSearch] = useState('');
+  /** Search text applied to the API after debounce */
+  const [searchQuery, setSearchQuery] = useState('');
 
-  async function load() {
+  useEffect(() => {
+    const t = window.setTimeout(() => setSearchQuery(search), SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(t);
+  }, [search]);
+
+  const load = useCallback(async () => {
     const params = new URLSearchParams();
     if (type) params.set('type', type);
     if (status) params.set('status', status);
     if (category) params.set('category', category);
     if (createdFrom) params.set('createdFrom', new Date(createdFrom).toISOString());
     if (createdTo) params.set('createdTo', new Date(createdTo).toISOString());
-    if (search) params.set('search', search);
+    if (searchQuery) params.set('search', searchQuery);
     params.set('limit', '100');
     const res = await api<{ tickets: TicketRow[] }>(`/tickets?${params.toString()}`);
     setTickets(res.tickets);
-  }
+  }, [type, status, category, createdFrom, createdTo, searchQuery]);
 
   useEffect(() => {
-    void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    void load().catch(() => {
+      /* keep existing rows on transient failure */
+    });
+  }, [load]);
 
   return (
     <div className="my-requests-page">
@@ -54,6 +64,7 @@ export function MyRequestsPage() {
           <div className="d-flex align-items-center gap-2 mb-2 text-secondary small fw-medium">
             <IconFilter size={16} stroke={1.5} aria-hidden />
             Filters
+            <span className="fw-normal text-secondary opacity-75">· updates automatically</span>
           </div>
           <div className="row g-2 align-items-end">
             <div className="col-12 col-sm-6 col-md-4 col-lg-2">
@@ -92,7 +103,7 @@ export function MyRequestsPage() {
               <label className="form-label mb-1 small text-secondary">To</label>
               <input type="date" className="form-control form-control-sm" value={createdTo} onChange={(e) => setCreatedTo(e.target.value)} />
             </div>
-            <div className="col-12 col-md-8 col-lg-2">
+            <div className="col-12 col-md-8 col-lg-4">
               <label className="form-label mb-1 small text-secondary">Search</label>
               <input
                 type="search"
@@ -101,11 +112,6 @@ export function MyRequestsPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-            </div>
-            <div className="col-12 col-lg-auto ms-lg-auto">
-              <button type="button" className="btn btn-primary btn-sm w-100 w-lg-auto" onClick={() => void load()}>
-                Apply filters
-              </button>
             </div>
           </div>
         </div>
