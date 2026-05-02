@@ -1,7 +1,9 @@
-import { Alert, Box, Button, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { api } from '../api';
+import { api, apiMultipart } from '../api';
+import { AttachmentPicker } from '../components/AttachmentPicker';
+import { VoiceToTextButton } from '../components/VoiceToTextButton';
 
 interface Item {
   id: number;
@@ -19,6 +21,7 @@ export function CatalogItemPage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [extra, setExtra] = useState<Record<string, string>>({});
+  const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -48,10 +51,16 @@ export function CatalogItemPage() {
     if (!id) return;
     setError(null);
     try {
-      const res = await api<{ ticket: { id: number } }>(`/catalog/items/${id}/requests`, {
-        method: 'POST',
-        json: { title, description, extra },
-      });
+      const fd = new FormData();
+      fd.append('title', title);
+      fd.append('description', description);
+      fd.append('extra_json', JSON.stringify(extra));
+
+      for (const f of files) {
+        fd.append('attachments', f);
+      }
+
+      const res = await apiMultipart<{ ticket: { id: number } }>(`/catalog/items/${id}/requests/multipart`, fd);
       navigate(`/tickets/${res.ticket.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed');
@@ -76,6 +85,10 @@ export function CatalogItemPage() {
         </Alert>
       )}
       <TextField label="Title" fullWidth value={title} onChange={(e) => setTitle(e.target.value)} sx={{ mb: 2 }} />
+      <Stack sx={{ flexDirection: 'row', alignItems: 'center', gap: 1, mb: 1 }}>
+        <Typography variant="subtitle2">Details</Typography>
+        <VoiceToTextButton onAppend={(t) => setDescription((prev) => `${prev}${t}`)} />
+      </Stack>
       <TextField
         label="Description / details"
         fullWidth
@@ -85,6 +98,7 @@ export function CatalogItemPage() {
         onChange={(e) => setDescription(e.target.value)}
         sx={{ mb: 2 }}
       />
+      <AttachmentPicker files={files} onFilesChange={setFiles} helperText="Attach files or capture a photo before submitting." />
       {fields.map((f) => (
         <TextField
           key={f.name}

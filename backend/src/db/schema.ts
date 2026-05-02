@@ -116,4 +116,17 @@ CREATE INDEX IF NOT EXISTS idx_tickets_created_at ON tickets(created_at);
 CREATE INDEX IF NOT EXISTS idx_comments_ticket_id ON comments(ticket_id);
 CREATE INDEX IF NOT EXISTS idx_approvals_ticket_id ON approvals(ticket_id);
 CREATE INDEX IF NOT EXISTS idx_kb_published ON knowledge_articles(is_published);
+
+CREATE TABLE IF NOT EXISTS ticket_attachments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ticket_id INTEGER NOT NULL REFERENCES tickets(id),
+  uploaded_by_user_id INTEGER NOT NULL REFERENCES users(id),
+  original_filename TEXT NOT NULL,
+  stored_relative_path TEXT NOT NULL,
+  mime_type TEXT NOT NULL,
+  size_bytes INTEGER NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_ticket_attachments_ticket_id ON ticket_attachments(ticket_id);
 `;

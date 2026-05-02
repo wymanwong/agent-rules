@@ -9,6 +9,7 @@ import { createTicketController } from '../controllers/ticketController.js';
 import { createCatalogController } from '../controllers/catalogController.js';
 import { createKnowledgeController } from '../controllers/knowledgeController.js';
 import { createAdminController } from '../controllers/adminController.js';
+import { uploadAttachmentsMemory } from '../middleware/upload.js';
 
 export function registerRoutes(app: Express, db: Database): void {
   const auth = createAuthController(db);
@@ -27,7 +28,11 @@ export function registerRoutes(app: Express, db: Database): void {
   api.use(authenticate);
 
   api.post('/tickets', tickets.create.bind(tickets));
+  api.post('/tickets/multipart', uploadAttachmentsMemory(), asyncHandler(tickets.createMultipart.bind(tickets)));
   api.get('/tickets', tickets.list.bind(tickets));
+  api.get('/tickets/:ticketId/attachments/:attachmentId/download', tickets.downloadAttachment.bind(tickets));
+  api.delete('/tickets/:ticketId/attachments/:attachmentId', tickets.deleteAttachment.bind(tickets));
+  api.post('/tickets/:id/attachments/multipart', uploadAttachmentsMemory(), asyncHandler(tickets.addAttachmentsMultipart.bind(tickets)));
   api.get('/tickets/:id', tickets.getById.bind(tickets));
   api.patch('/tickets/:id', tickets.patch.bind(tickets));
   api.post('/tickets/:id/comments', tickets.addComment.bind(tickets));
@@ -44,6 +49,11 @@ export function registerRoutes(app: Express, db: Database): void {
   api.patch('/catalog/items/:id', authorize('Admin'), catalog.update.bind(catalog));
   api.delete('/catalog/items/:id', authorize('Admin'), catalog.delete.bind(catalog));
   api.post('/catalog/items/:id/requests', catalog.requestFromCatalog.bind(catalog));
+  api.post(
+    '/catalog/items/:id/requests/multipart',
+    uploadAttachmentsMemory(),
+    asyncHandler(catalog.requestFromCatalogMultipart.bind(catalog)),
+  );
 
   api.post('/knowledge/articles', authorize('Admin'), knowledge.create.bind(knowledge));
   api.patch('/knowledge/articles/:id', authorize('Admin'), knowledge.update.bind(knowledge));

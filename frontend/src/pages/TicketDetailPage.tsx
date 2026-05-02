@@ -18,7 +18,9 @@ import {
 } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { api } from '../api';
+import { api, apiMultipart, authorizedDelete, fetchAuthorizedBlob } from '../api';
+import { AttachmentPicker } from '../components/AttachmentPicker';
+import { VoiceToTextButton } from '../components/VoiceToTextButton';
 import { useAuth } from '../auth/AuthContext';
 
 interface Ticket {
@@ -34,6 +36,7 @@ interface Ticket {
   category: string | null;
   due_at: string | null;
   created_at: string;
+  requester_id: number;
 }
 
 interface Comment {
@@ -60,6 +63,15 @@ interface AssignmentRow {
   changed_at: string;
 }
 
+interface AttachmentMeta {
+  id: number;
+  original_filename: string;
+  mime_type: string;
+  size_bytes: number;
+  uploaded_by_user_id: number;
+  created_at: string;
+}
+
 const incidentStatuses = ['New', 'InTriage', 'InProgress', 'PendingUser', 'Pending3rdParty', 'Resolved', 'Closed'];
 const srStatuses = ['New', 'AwaitingApproval', 'Approved', 'InProgress', 'Completed', 'Closed'];
 
@@ -72,6 +84,7 @@ export function TicketDetailPage() {
     comments: Comment[];
     approvals: Approval[];
     assignment_history: AssignmentRow[];
+    attachments?: AttachmentMeta[];
     assignee?: { id: number; name: string };
     team?: { id: number; name: string };
   } | null>(null);
@@ -80,12 +93,14 @@ export function TicketDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [statusDraft, setStatusDraft] = useState('');
   const [approverComment, setApproverComment] = useState('');
+  const [moreFiles, setMoreFiles] = useState<File[]>([]);
 
   async function refresh() {
     if (!id) return;
     const res = await api<typeof data>(`/tickets/${id}`);
     setData(res as typeof data);
     if (res?.ticket) setStatusDraft(res.ticket.status);
+    setMoreFiles([]);
   }
 
   useEffect(() => {
@@ -134,6 +149,47 @@ export function TicketDetailPage() {
     }
   }
 
+  async function downloadAttachment(att: AttachmentMeta) {
+    if (!id) return;
+    setError(null);
+    try {
+      const blob = await fetchAuthorizedBlob(`/tickets/${id}/attachments/${att.id}/download`);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = att.original_filename || `attachment-${att.id}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Download failed');
+    }
+  }
+
+  async function removeAttachment(att: AttachmentMeta) {
+    if (!id) return;
+    setError(null);
+    try {
+      await authorizedDelete(`/tickets/${id}/attachments/${att.id}`);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Delete failed');
+    }
+  }
+
+  async function uploadMoreAttachments(e: React.FormEvent) {
+    e.preventDefault();
+    if (!id || moreFiles.length === 0) return;
+    setError(null);
+    try {
+      const fd = new FormData();
+      for (const f of moreFiles) fd.append('attachments', f);
+      await apiMultipart<{ attachments: AttachmentMeta[] }>(`/tickets/${id}/attachments/multipart`, fd);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed');
+    }
+  }
+
   async function decideApproval(approvalId: number, status: 'Approved' | 'Rejected') {
     if (!id) return;
     setError(null);
@@ -152,6 +208,7 @@ export function TicketDetailPage() {
   if (!data) return <Typography>Loading…</Typography>;
 
   const { ticket, comments, approvals, assignment_history: history } = data;
+  const attachments = data.attachments ?? [];
   const statuses = ticket.type === 'Incident' ? incidentStatuses : srStatuses;
   const canClose =
     user?.role === 'EndUser' &&
@@ -185,6 +242,42 @@ export function TicketDetailPage() {
       <Divider sx={{ my: 2 }} />
       <Typography variant="subtitle1">Description</Typography>
       <Typography sx={{ mb: 2 }}>{ticket.description}</Typography>
+
+      <Typography variant="subtitle1" gutterBottom>
+        Attachments
+      </Typography>
+      {attachments.length === 0 && (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          No attachments yet.
+        </Typography>
+      )}
+      {attachments.map((att) => (
+        <Box key={att.id} sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mb: 1 }}>
+          <Typography variant="body2">
+            {att.original_filename} ({Math.round(att.size_bytes / 1024)} KB)
+          </Typography>
+          <Button size="small" onClick={() => void downloadAttachment(att)}>
+            Download
+          </Button>
+          {(user?.role === 'IT' ||
+            user?.role === 'Admin' ||
+            (user?.role === 'EndUser' && ticket.requester_id === user.id)) && (
+            <Button size="small" color="error" onClick={() => void removeAttachment(att)}>
+              Remove
+            </Button>
+          )}
+        </Box>
+      ))}
+
+      <Box component="form" onSubmit={uploadMoreAttachments} sx={{ mb: 3 }}>
+        <Typography variant="subtitle2" gutterBottom>
+          Add attachments
+        </Typography>
+        <AttachmentPicker files={moreFiles} onFilesChange={setMoreFiles} />
+        <Button type="submit" variant="outlined" size="small" disabled={moreFiles.length === 0}>
+          Upload files
+        </Button>
+      </Box>
 
       {ticket.type === 'ServiceRequest' && approvals.length > 0 && (
         <Box sx={{ mb: 2 }}>
@@ -275,6 +368,10 @@ export function TicketDetailPage() {
       ))}
 
       <Box component="form" onSubmit={postComment} sx={{ mt: 2 }}>
+        <Stack sx={{ flexDirection: 'row', alignItems: 'center', gap: 1, mb: 1 }}>
+          <Typography variant="subtitle2">{internal ? 'Internal note' : 'Comment'}</Typography>
+          <VoiceToTextButton onAppend={(t) => setComment((prev) => `${prev}${t}`)} />
+        </Stack>
         <TextField
           label={internal ? 'Internal note' : 'Comment'}
           fullWidth

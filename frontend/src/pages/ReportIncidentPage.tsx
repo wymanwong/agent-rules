@@ -6,12 +6,15 @@ import {
   InputLabel,
   MenuItem,
   Select,
+  Stack,
   TextField,
   Typography,
 } from '@mui/material';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../api';
+import { apiMultipart } from '../api';
+import { AttachmentPicker } from '../components/AttachmentPicker';
+import { VoiceToTextButton } from '../components/VoiceToTextButton';
 
 const impacts = ['SingleUser', 'Department', 'Site', 'Organization'] as const;
 const urgencies = ['Low', 'Medium', 'High', 'Critical'] as const;
@@ -24,25 +27,27 @@ export function ReportIncidentPage() {
   const [subcategory, setSubcategory] = useState('');
   const [impact, setImpact] = useState<(typeof impacts)[number]>('SingleUser');
   const [urgency, setUrgency] = useState<(typeof urgencies)[number]>('Medium');
+  const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     try {
-      const res = await api<{ ticket: { id: number } }>('/tickets', {
-        method: 'POST',
-        json: {
-          type: 'Incident',
-          title,
-          description,
-          impact,
-          urgency,
-          category: category || undefined,
-          subcategory: subcategory || undefined,
-          source: 'Portal',
-        },
-      });
+      const fd = new FormData();
+      fd.append('type', 'Incident');
+      fd.append('title', title);
+      fd.append('description', description);
+      fd.append('impact', impact);
+      fd.append('urgency', urgency);
+      fd.append('source', 'Portal');
+      if (category.trim()) fd.append('category', category.trim());
+      if (subcategory.trim()) fd.append('subcategory', subcategory.trim());
+      for (const f of files) {
+        fd.append('attachments', f);
+      }
+
+      const res = await apiMultipart<{ ticket: { id: number } }>('/tickets/multipart', fd);
       navigate(`/tickets/${res.ticket.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed');
@@ -60,8 +65,12 @@ export function ReportIncidentPage() {
         </Alert>
       )}
       <TextField label="Title" fullWidth required value={title} onChange={(e) => setTitle(e.target.value)} sx={{ mb: 2 }} />
+      <Stack sx={{ flexDirection: 'row', alignItems: 'center', gap: 1, mb: 1 }}>
+        <Typography variant="subtitle2">Description</Typography>
+        <VoiceToTextButton onAppend={(t) => setDescription((prev) => `${prev}${t}`)} />
+      </Stack>
       <TextField
-        label="Description"
+        label="Describe what is broken"
         fullWidth
         required
         multiline
@@ -69,6 +78,11 @@ export function ReportIncidentPage() {
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         sx={{ mb: 2 }}
+      />
+      <AttachmentPicker
+        files={files}
+        onFilesChange={setFiles}
+        helperText="Add screenshots, PDFs, or other files (server limit applies). Use Camera on mobile when supported."
       />
       <TextField label="Category" fullWidth value={category} onChange={(e) => setCategory(e.target.value)} sx={{ mb: 2 }} />
       <TextField
@@ -98,7 +112,6 @@ export function ReportIncidentPage() {
           ))}
         </Select>
       </FormControl>
-      <TextField label="Attachments (stub)" fullWidth disabled sx={{ mb: 2 }} helperText="Not implemented in this demo." />
       <Button type="submit" variant="contained">
         Submit incident
       </Button>

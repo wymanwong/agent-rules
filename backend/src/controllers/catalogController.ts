@@ -1,4 +1,5 @@
 import type { Response } from 'express';
+import type { Express } from 'express';
 import type { Database } from 'better-sqlite3';
 import type { AuthRequest } from '../middleware/auth.js';
 import { HttpError } from '../middleware/errorHandler.js';
@@ -6,6 +7,7 @@ import * as catalogRepo from '../repositories/catalogRepository.js';
 import * as userRepo from '../repositories/userRepository.js';
 import * as approvalRepo from '../repositories/approvalRepository.js';
 import { createTicket } from '../services/ticketService.js';
+import { persistUploadedFiles } from '../services/attachmentService.js';
 import type { Impact, Priority, Urgency } from '../models/types.js';
 
 export function createCatalogController(db: Database) {
@@ -126,6 +128,78 @@ export function createCatalogController(db: Database) {
         req.user.userId,
         requester?.department ?? null,
       );
+
+      if (item.requires_manager_approval === 1) {
+        const approverId = resolveApproverUserId(db, requester);
+        approvalRepo.insertApproval(db, {
+          ticket_id: ticket.id,
+          approver_user_id: approverId,
+          status: 'Pending',
+          comment: null,
+          created_at: new Date().toISOString(),
+          decided_at: null,
+        });
+      }
+
+      res.status(201).json({ ticket });
+    },
+
+    requestFromCatalogMultipart: async (req: AuthRequest, res: Response): Promise<void> => {
+      if (!req.user) throw new HttpError(401, 'Unauthorized');
+      const catalogId = Number(req.params.id);
+      const item = catalogRepo.findById(db, catalogId);
+      if (!item || item.is_published !== 1) throw new HttpError(404, 'Catalog item not found');
+
+      const requester = userRepo.findUserById(db, req.user.userId);
+      const body = req.body as Record<string, string>;
+      const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+
+      const impact = (item.default_impact ?? 'SingleUser') as Impact;
+      const urgency = (item.default_urgency ?? 'Medium') as Urgency;
+      const title = body.title?.trim() || item.name;
+      const description = body.description?.trim() || item.description;
+
+      let extraJson: string | null = null;
+      const ej = body.extra_json?.trim();
+      if (ej) {
+        try {
+          JSON.parse(ej);
+          extraJson = ej;
+        } catch {
+          throw new HttpError(400, 'extra_json must be valid JSON');
+        }
+      }
+
+      let status = 'New';
+      if (item.requires_manager_approval === 1) {
+        status = 'AwaitingApproval';
+      }
+
+      const catalogPriority =
+        item.default_priority && ['P1', 'P2', 'P3', 'P4'].includes(item.default_priority)
+          ? (item.default_priority as Priority)
+          : undefined;
+
+      const ticket = createTicket(
+        db,
+        {
+          title,
+          description,
+          type: 'ServiceRequest',
+          impact,
+          urgency,
+          ...(catalogPriority !== undefined ? { priority: catalogPriority } : {}),
+          category: item.default_category ?? undefined,
+          subcategory: item.default_subcategory ?? undefined,
+          source: 'Portal',
+          ticket_extra_json: extraJson,
+          status,
+        },
+        req.user.userId,
+        requester?.department ?? null,
+      );
+
+      await persistUploadedFiles(db, ticket.id, req.user.userId, files);
 
       if (item.requires_manager_approval === 1) {
         const approverId = resolveApproverUserId(db, requester);

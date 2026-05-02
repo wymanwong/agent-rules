@@ -16,6 +16,12 @@ cd backend && cp .env.example .env && npm install && npm run db:init -- --force
 cd ../frontend && npm install
 ```
 
+## Attachments & voice
+
+- **Uploads**: Files are stored under `UPLOADS_DIR` (default `./data/uploads`) with metadata in `ticket_attachments`. Max size per file: `MAX_UPLOAD_MB` (default 15).
+- **API**: `POST /tickets/multipart` (fields + optional `attachments[]`), `POST /catalog/items/:id/requests/multipart`, `POST /tickets/:id/attachments/multipart`; download `GET /tickets/:ticketId/attachments/:attachmentId/download` (JWT); delete `DELETE /tickets/:ticketId/attachments/:attachmentId` (requester + IT/Admin may remove).
+- **Portal**: Incident and catalog request forms support **voice-to-text** (Web Speech API — Chrome/Edge/Safari; HTTPS except localhost), **camera / gallery**, and **multi-file** picks.
+
 ## Run
 
 Terminal 1:
