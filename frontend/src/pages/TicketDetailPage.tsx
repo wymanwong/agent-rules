@@ -1,21 +1,3 @@
-import {
-  Alert,
-  Box,
-  Button,
-  Divider,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  TextField,
-  Typography,
-} from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, apiMultipart, authorizedDelete, fetchAuthorizedBlob } from '../api';
@@ -207,7 +189,7 @@ export function TicketDetailPage() {
     }
   }
 
-  if (!data) return <Typography>Loading…</Typography>;
+  if (!data) return <div className="text-secondary">Loading…</div>;
 
   const { ticket, comments, approvals, assignment_history: history } = data;
   const attachments = data.attachments ?? [];
@@ -220,194 +202,194 @@ export function TicketDetailPage() {
   const showInternal = user && (user.role === 'IT' || user.role === 'Admin');
 
   const pendingApproval =
-    user &&
-    approvals.find((a) => a.status === 'Pending' && a.approver_user_id === user.id);
+    user && approvals.find((a) => a.status === 'Pending' && a.approver_user_id === user.id);
 
   return (
-    <Box>
-      <Typography variant="h5">
-        {ticket.ticket_number} — {ticket.title}
-      </Typography>
-      <Typography color="text.secondary" gutterBottom>
-        {ticket.type} · {ticket.status} · {ticket.priority} · Impact {ticket.impact} / Urgency {ticket.urgency}
-      </Typography>
-      {ticket.type === 'ServiceRequest' && data.catalog_item?.id != null && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          Catalog offering: <strong>{data.catalog_item.name ?? `Item #${data.catalog_item.id}`}</strong> (catalog ID{' '}
-          {data.catalog_item.id})
-        </Typography>
-      )}
-      {ticket.due_at && (
-        <Typography variant="body2">
-          SLA due: {new Date(ticket.due_at).toLocaleString()}
-        </Typography>
-      )}
-      {error && (
-        <Alert severity="error" sx={{ my: 2 }}>
-          {error}
-        </Alert>
-      )}
-      <Divider sx={{ my: 2 }} />
-      <Typography variant="subtitle1">Description</Typography>
-      <Typography sx={{ mb: 2 }}>{ticket.description}</Typography>
+    <>
+      <div className="page-header mb-4">
+        <h2 className="page-title">
+          {ticket.ticket_number} — {ticket.title}
+        </h2>
+        <div className="text-secondary">
+          {ticket.type} · {ticket.status} · {ticket.priority} · Impact {ticket.impact} / Urgency {ticket.urgency}
+        </div>
+        {ticket.type === 'ServiceRequest' && data.catalog_item?.id != null && (
+          <div className="text-secondary mt-2">
+            Catalog offering: <strong>{data.catalog_item.name ?? `Item #${data.catalog_item.id}`}</strong> (catalog ID{' '}
+            {data.catalog_item.id})
+          </div>
+        )}
+        {ticket.due_at && (
+          <div className="mt-2">
+            SLA due: <strong>{new Date(ticket.due_at).toLocaleString()}</strong>
+          </div>
+        )}
+      </div>
 
-      <Typography variant="subtitle1" gutterBottom>
-        Attachments
-      </Typography>
-      {attachments.length === 0 && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          No attachments yet.
-        </Typography>
-      )}
+      {error && <div className="alert alert-danger">{error}</div>}
+
+      <hr />
+
+      <h3 className="mt-4">Description</h3>
+      <p className="mb-4">{ticket.description}</p>
+
+      <h3 className="mb-3">Attachments</h3>
+      {attachments.length === 0 && <p className="text-secondary mb-3">No attachments yet.</p>}
       {attachments.map((att) => (
-        <Box key={att.id} sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mb: 1 }}>
-          <Typography variant="body2">
+        <div key={att.id} className="d-flex flex-wrap align-items-center gap-2 mb-2">
+          <span>
             {att.original_filename} ({Math.round(att.size_bytes / 1024)} KB)
-          </Typography>
-          <Button size="small" onClick={() => void downloadAttachment(att)}>
+          </span>
+          <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => void downloadAttachment(att)}>
             Download
-          </Button>
+          </button>
           {(user?.role === 'IT' ||
             user?.role === 'Admin' ||
             (user?.role === 'EndUser' && ticket.requester_id === user.id)) && (
-            <Button size="small" color="error" onClick={() => void removeAttachment(att)}>
+            <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => void removeAttachment(att)}>
               Remove
-            </Button>
+            </button>
           )}
-        </Box>
+        </div>
       ))}
 
-      <Box component="form" onSubmit={uploadMoreAttachments} sx={{ mb: 3 }}>
-        <Typography variant="subtitle2" gutterBottom>
-          Add attachments
-        </Typography>
+      <form onSubmit={uploadMoreAttachments} className="mb-4">
+        <h4 className="h5 mt-4 mb-2">Add attachments</h4>
         <AttachmentPicker files={moreFiles} onFilesChange={setMoreFiles} />
-        <Button type="submit" variant="outlined" size="small" disabled={moreFiles.length === 0}>
+        <button type="submit" className="btn btn-outline-primary btn-sm" disabled={moreFiles.length === 0}>
           Upload files
-        </Button>
-      </Box>
+        </button>
+      </form>
 
       {ticket.type === 'ServiceRequest' && approvals.length > 0 && (
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle1">Approvals</Typography>
-          {approvals.map((a) => (
-            <Typography key={a.id} variant="body2">
-              #{a.id} — user {a.approver_user_id}: {a.status}
-              {pendingApproval?.id === a.id && (
-                <Stack sx={{ flexDirection: 'row', gap: 1, mt: 1 }}>
-                  <Button size="small" variant="contained" onClick={() => void decideApproval(a.id, 'Approved')}>
-                    Approve
-                  </Button>
-                  <Button size="small" color="error" onClick={() => void decideApproval(a.id, 'Rejected')}>
-                    Reject
-                  </Button>
-                </Stack>
-              )}
-            </Typography>
-          ))}
-          {pendingApproval && (
-            <TextField
-              label="Approval comment"
-              fullWidth
-              size="small"
-              sx={{ mt: 1 }}
-              value={approverComment}
-              onChange={(e) => setApproverComment(e.target.value)}
-            />
-          )}
-        </Box>
+        <div className="card mb-4">
+          <div className="card-header">
+            <h3 className="card-title mb-0">Approvals</h3>
+          </div>
+          <div className="card-body">
+            {approvals.map((a) => (
+              <div key={a.id} className="mb-3">
+                <div>
+                  #{a.id} — approver user {a.approver_user_id}: <span className="badge bg-secondary">{a.status}</span>
+                </div>
+                {pendingApproval?.id === a.id && (
+                  <div className="btn-list mt-2">
+                    <button type="button" className="btn btn-primary btn-sm" onClick={() => void decideApproval(a.id, 'Approved')}>
+                      Approve
+                    </button>
+                    <button type="button" className="btn btn-danger btn-sm" onClick={() => void decideApproval(a.id, 'Rejected')}>
+                      Reject
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+            {pendingApproval && (
+              <div className="mt-2">
+                <label className="form-label">Approval comment</label>
+                <input
+                  type="text"
+                  className="form-control form-control-sm"
+                  value={approverComment}
+                  onChange={(e) => setApproverComment(e.target.value)}
+                />
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {showInternal && (
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle1">Assignment history</Typography>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>When</TableCell>
-                <TableCell>From user</TableCell>
-                <TableCell>To user</TableCell>
-                <TableCell>Team change</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {history.map((h) => (
-                <TableRow key={h.id}>
-                  <TableCell>{new Date(h.changed_at).toLocaleString()}</TableCell>
-                  <TableCell>{h.from_user_id ?? '—'}</TableCell>
-                  <TableCell>{h.to_user_id ?? '—'}</TableCell>
-                  <TableCell>
-                    {h.from_team_id ?? '—'} → {h.to_team_id ?? '—'}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Box>
+        <>
+          <h3 className="mb-2">Assignment history</h3>
+          <div className="table-responsive mb-4">
+            <table className="table table-sm table-bordered">
+              <thead>
+                <tr>
+                  <th>When</th>
+                  <th>From user</th>
+                  <th>To user</th>
+                  <th>Team change</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.map((h) => (
+                  <tr key={h.id}>
+                    <td>{new Date(h.changed_at).toLocaleString()}</td>
+                    <td>{h.from_user_id ?? '—'}</td>
+                    <td>{h.to_user_id ?? '—'}</td>
+                    <td>
+                      {h.from_team_id ?? '—'} → {h.to_team_id ?? '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="row g-2 align-items-end mb-4">
+            <div className="col-auto">
+              <label className="form-label">Status</label>
+              <select className="form-select" value={statusDraft} onChange={(e) => setStatusDraft(e.target.value)}>
+                {statuses.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="col-auto">
+              <button type="button" className="btn btn-primary" onClick={() => void applyStatus()}>
+                Update status
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
-      {showInternal && (
-        <Stack sx={{ flexDirection: 'row', gap: 2, alignItems: 'center', mb: 2 }}>
-          <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel>Status</InputLabel>
-            <Select label="Status" value={statusDraft} onChange={(e) => setStatusDraft(e.target.value)}>
-              {statuses.map((s) => (
-                <MenuItem key={s} value={s}>
-                  {s}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <Button variant="contained" onClick={() => void applyStatus()}>
-            Update status
-          </Button>
-        </Stack>
-      )}
-
-      <Typography variant="subtitle1">Comments</Typography>
+      <h3 className="mb-3">Comments</h3>
       {comments.map((c) => (
-        <Box key={c.id} sx={{ borderLeft: '3px solid #ccc', pl: 1, mb: 1 }}>
-          <Typography variant="caption" color="text.secondary">
+        <div key={c.id} className="border-start border-3 ps-3 mb-3">
+          <div className="text-secondary small">
             {new Date(c.created_at).toLocaleString()} · author {c.author_id}
             {c.is_internal === 1 ? ' · internal' : ''}
-          </Typography>
-          <Typography variant="body2">{c.body}</Typography>
-        </Box>
+          </div>
+          <div>{c.body}</div>
+        </div>
       ))}
 
-      <Box component="form" onSubmit={postComment} sx={{ mt: 2 }}>
-        <Stack sx={{ flexDirection: 'row', alignItems: 'center', gap: 1, mb: 1 }}>
-          <Typography variant="subtitle2">{internal ? 'Internal note' : 'Comment'}</Typography>
+      <form onSubmit={postComment} className="mt-4">
+        <div className="d-flex align-items-center gap-2 mb-2">
+          <span className="fw-medium">{internal ? 'Internal note' : 'Comment'}</span>
           <VoiceToTextButton onAppend={(t) => setComment((prev) => `${prev}${t}`)} />
-        </Stack>
-        <TextField
-          label={internal ? 'Internal note' : 'Comment'}
-          fullWidth
-          multiline
-          minRows={2}
+        </div>
+        <textarea
+          className="form-control mb-2"
+          rows={3}
+          placeholder={internal ? 'Internal note' : 'Comment'}
           value={comment}
           onChange={(e) => setComment(e.target.value)}
         />
         {showInternal && (
-          <Stack sx={{ flexDirection: 'row', gap: 2, mt: 1 }}>
-            <Button size="small" variant={internal ? 'contained' : 'outlined'} onClick={() => setInternal(true)}>
+          <div className="btn-list mb-2">
+            <button type="button" className={`btn btn-sm ${internal ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setInternal(true)}>
               Internal
-            </Button>
-            <Button size="small" variant={!internal ? 'contained' : 'outlined'} onClick={() => setInternal(false)}>
+            </button>
+            <button type="button" className={`btn btn-sm ${!internal ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setInternal(false)}>
               External
-            </Button>
-          </Stack>
+            </button>
+          </div>
         )}
-        <Button type="submit" sx={{ mt: 2 }}>
+        <button type="submit" className="btn btn-outline-primary">
           Add comment
-        </Button>
-      </Box>
+        </button>
+      </form>
 
       {canClose && (
-        <Button sx={{ mt: 2 }} variant="contained" color="secondary" onClick={() => void closeTicket()}>
+        <button type="button" className="btn btn-secondary mt-3" onClick={() => void closeTicket()}>
           Close ticket
-        </Button>
+        </button>
       )}
-    </Box>
+    </>
   );
 }

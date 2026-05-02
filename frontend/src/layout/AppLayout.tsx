@@ -1,171 +1,108 @@
-import MenuIcon from '@mui/icons-material/Menu';
-import {
-  AppBar,
-  Box,
-  Button,
-  Container,
-  Divider,
-  Drawer,
-  IconButton,
-  List,
-  ListItemButton,
-  ListItemText,
-  Toolbar,
-  Typography,
-  useMediaQuery,
-  useTheme,
-} from '@mui/material';
-import { useState } from 'react';
-import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-
-const DRAWER_WIDTH = 280;
 
 export function AppLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const theme = useTheme();
-  const isNarrow = useMediaQuery(theme.breakpoints.down('md'));
-  const [mobileOpen, setMobileOpen] = useState(false);
 
-  const closeDrawer = () => setMobileOpen(false);
-
-  const navItems: { label: string; to: string; show: boolean }[] = [
-    { label: 'Portal', to: '/', show: true },
-    { label: 'Knowledge', to: '/knowledge', show: true },
-    { label: 'My Requests', to: '/my-requests', show: !!user },
-    { label: 'IT Queue', to: '/it/queue', show: !!user && (user.role === 'IT' || user.role === 'Admin') },
-    { label: 'Admin', to: '/admin', show: !!user && user.role === 'Admin' },
-    { label: 'Catalog admin', to: '/admin/catalog', show: !!user && user.role === 'Admin' },
-  ].filter((i) => i.show);
-
-  const drawer = (
-    <Box sx={{ width: DRAWER_WIDTH, pt: 2 }} role="presentation">
-      <Typography variant="subtitle2" sx={{ px: 2, pb: 1, color: 'text.secondary' }}>
-        Navigate
-      </Typography>
-      <List dense>
-        {navItems.map((item) => (
-          <ListItemButton
-            key={item.to}
-            component={RouterLink}
-            to={item.to}
-            selected={location.pathname === item.to || (item.to !== '/' && location.pathname.startsWith(item.to))}
-            onClick={closeDrawer}
-          >
-            <ListItemText primary={item.label} />
-          </ListItemButton>
-        ))}
-      </List>
-      <Divider sx={{ my: 1 }} />
-      {user ? (
-        <>
-          <Typography variant="caption" sx={{ px: 2, display: 'block', color: 'text.secondary' }}>
-            {user.name} · {user.role}
-          </Typography>
-          <List dense>
-            <ListItemButton
-              onClick={() => {
-                logout();
-                closeDrawer();
-                navigate('/login');
-              }}
-            >
-              <ListItemText primary="Log out" />
-            </ListItemButton>
-          </List>
-        </>
-      ) : (
-        <List dense>
-          <ListItemButton component={RouterLink} to="/login" onClick={closeDrawer}>
-            <ListItemText primary="Sign in" />
-          </ListItemButton>
-        </List>
-      )}
-    </Box>
-  );
+  const linkClass = ({ isActive }: { isActive: boolean }) =>
+    `nav-link ${isActive ? 'active' : ''}`;
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'grey.50' }}>
-      <AppBar position="sticky">
-        <Toolbar sx={{ gap: 1, flexWrap: 'wrap', minHeight: { xs: 56, sm: 64 } }}>
-          {isNarrow && (
-            <IconButton color="inherit" edge="start" aria-label="open menu" onClick={() => setMobileOpen(true)}>
-              <MenuIcon />
-            </IconButton>
-          )}
-          <Typography
-            variant="h6"
-            component={RouterLink}
-            to="/"
-            sx={{
-              flexGrow: isNarrow ? 1 : undefined,
-              color: 'inherit',
-              textDecoration: 'none',
-              fontSize: { xs: '1rem', sm: undefined },
-            }}
-          >
+    <div className="page">
+      <header className="navbar navbar-expand-md navbar-light d-print-none border-bottom bg-white sticky-top shadow-sm">
+        <div className="container-fluid px-3">
+          <NavLink className="navbar-brand fw-semibold text-primary" to="/">
             IT Helpdesk
-          </Typography>
-          {!isNarrow && (
-            <>
-              <Button color="inherit" component={RouterLink} to="/">
-                Portal
-              </Button>
-              <Button color="inherit" component={RouterLink} to="/knowledge">
-                Knowledge
-              </Button>
-              {user ? (
+          </NavLink>
+          <button
+            className="navbar-toggler"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#navbar-menu"
+            aria-controls="navbar-menu"
+            aria-expanded="false"
+            aria-label="Toggle navigation"
+          >
+            <span className="navbar-toggler-icon" />
+          </button>
+          <div className="collapse navbar-collapse" id="navbar-menu">
+            <ul className="navbar-nav me-auto mb-2 mb-md-0 gap-md-1">
+              <li className="nav-item">
+                <NavLink className={linkClass} to="/">
+                  Portal
+                </NavLink>
+              </li>
+              <li className="nav-item">
+                <NavLink className={linkClass} to="/knowledge">
+                  Knowledge
+                </NavLink>
+              </li>
+              {user && (
                 <>
-                  <Button color="inherit" component={RouterLink} to="/my-requests">
-                    My Requests
-                  </Button>
+                  <li className="nav-item">
+                    <NavLink className={linkClass} to="/my-requests">
+                      My Requests
+                    </NavLink>
+                  </li>
                   {(user.role === 'IT' || user.role === 'Admin') && (
-                    <Button color="inherit" component={RouterLink} to="/it/queue">
-                      IT Queue
-                    </Button>
+                    <li className="nav-item">
+                      <NavLink className={linkClass} to="/it/queue">
+                        IT Queue
+                      </NavLink>
+                    </li>
                   )}
                   {user.role === 'Admin' && (
                     <>
-                      <Button color="inherit" component={RouterLink} to="/admin">
-                        Admin
-                      </Button>
-                      <Button color="inherit" component={RouterLink} to="/admin/catalog" sx={{ display: { xs: 'none', lg: 'inline-flex' } }}>
-                        Catalog
-                      </Button>
+                      <li className="nav-item">
+                        <NavLink className={linkClass} to="/admin">
+                          Admin
+                        </NavLink>
+                      </li>
+                      <li className="nav-item d-none d-lg-block">
+                        <NavLink className={linkClass} to="/admin/catalog">
+                          Catalog
+                        </NavLink>
+                      </li>
                     </>
                   )}
-                  <Typography variant="body2" sx={{ opacity: 0.9, display: { xs: 'none', lg: 'block' } }}>
-                    {user.name} ({user.role})
-                  </Typography>
-                  <Button
-                    color="inherit"
+                </>
+              )}
+            </ul>
+            <div className="navbar-nav flex-row flex-wrap align-items-center gap-2 ms-md-auto">
+              {user ? (
+                <>
+                  <span className="nav-link disabled py-1 small text-secondary">
+                    {user.name} · {user.role}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary btn-sm"
                     onClick={() => {
                       logout();
                       navigate('/login');
                     }}
                   >
                     Log out
-                  </Button>
+                  </button>
                 </>
               ) : (
-                <Button color="inherit" component={RouterLink} to="/login">
+                <NavLink className="btn btn-primary btn-sm" to="/login">
                   Sign in
-                </Button>
+                </NavLink>
               )}
-            </>
-          )}
-        </Toolbar>
-      </AppBar>
+            </div>
+          </div>
+        </div>
+      </header>
 
-      <Drawer anchor="left" open={mobileOpen} onClose={closeDrawer} ModalProps={{ keepMounted: true }}>
-        {drawer}
-      </Drawer>
-
-      <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3 }, px: { xs: 2, sm: 3 } }}>
-        <Outlet />
-      </Container>
-    </Box>
+      <div className="page-wrapper">
+        <div className="page-body">
+          <div className="container-xl py-4">
+            <Outlet />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -1,4 +1,3 @@
-import { Alert, Box, Button, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, apiMultipart } from '../api';
@@ -75,53 +74,63 @@ export function CatalogItemPage() {
     }
   }
 
-  if (!item) return <Typography>Loading…</Typography>;
+  if (!item) return <div className="text-secondary">Loading…</div>;
 
   const questionRows = fields();
 
   return (
-    <Box component="form" onSubmit={submit} sx={{ maxWidth: 720 }}>
-      <Typography variant="h4" gutterBottom>
-        {item.name}
-      </Typography>
-      <Typography color="text.secondary" sx={{ mb: 2 }}>
-        {item.description}
-      </Typography>
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-      <TextField label="Title" fullWidth value={title} onChange={(e) => setTitle(e.target.value)} sx={{ mb: 2 }} />
-      <Stack sx={{ flexDirection: 'row', alignItems: 'center', gap: 1, mb: 1 }}>
-        <Typography variant="subtitle2">Details</Typography>
-        <VoiceToTextButton onAppend={(t) => setDescription((prev) => `${prev}${t}`)} />
-      </Stack>
-      <TextField
-        label="Description / details"
-        fullWidth
-        multiline
-        minRows={3}
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        sx={{ mb: 2 }}
-      />
-      <AttachmentPicker files={files} onFilesChange={setFiles} helperText="Attach files or capture a photo before submitting." />
-      {questionRows.map((f) => (
-        <TextField
-          key={f.key || f.label}
-          label={f.label || f.key}
-          fullWidth
-          multiline={f.kind === 'paragraph'}
-          minRows={f.kind === 'paragraph' ? 3 : 1}
-          value={extra[f.key] ?? ''}
-          onChange={(e) => setExtra({ ...extra, [f.key]: e.target.value })}
-          sx={{ mb: 2 }}
-        />
-      ))}
-      <Button type="submit" variant="contained">
-        Submit request
-      </Button>
-    </Box>
+    <>
+      <div className="page-header mb-4">
+        <h2 className="page-title">{item.name}</h2>
+        <div className="text-secondary">{item.description}</div>
+      </div>
+      {error && <div className="alert alert-danger">{error}</div>}
+      <form onSubmit={submit} className="row g-3" style={{ maxWidth: 720 }}>
+        <div className="col-12">
+          <label className="form-label">Title</label>
+          <input type="text" className="form-control" value={title} onChange={(e) => setTitle(e.target.value)} />
+        </div>
+        <div className="col-12">
+          <div className="d-flex align-items-center gap-2 mb-1">
+            <label className="form-label mb-0">Details</label>
+            <VoiceToTextButton onAppend={(t) => setDescription((prev) => `${prev}${t}`)} />
+          </div>
+          <textarea
+            className="form-control"
+            rows={3}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </div>
+        <div className="col-12">
+          <AttachmentPicker files={files} onFilesChange={setFiles} helperText="Attach files or capture a photo before submitting." />
+        </div>
+        {questionRows.map((f) => (
+          <div key={f.key || f.label} className="col-12">
+            <label className="form-label">{f.label || f.key}</label>
+            {f.kind === 'paragraph' ? (
+              <textarea
+                className="form-control"
+                rows={3}
+                value={extra[f.key] ?? ''}
+                onChange={(e) => setExtra({ ...extra, [f.key]: e.target.value })}
+              />
+            ) : (
+              <input
+                type="text"
+                className="form-control"
+                value={extra[f.key] ?? ''}
+                onChange={(e) => setExtra({ ...extra, [f.key]: e.target.value })}
+              />
+            )}
+          </div>
+        ))}
+        <div className="col-12">
+          <button type="submit" className="btn btn-primary">
+            Submit request
+          </button>
+        </div>
+      </form>
+    </>
   );
 }

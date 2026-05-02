@@ -1,4 +1,3 @@
-import { Alert, Box, Button, Paper, TextField, Typography } from '@mui/material';
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
@@ -28,33 +27,45 @@ export function LoginPage() {
   }
 
   return (
-    <Box sx={{ maxWidth: 420, mx: 'auto', mt: 6 }}>
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h5" gutterBottom>
-          Sign in
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Demo: user@example.com / password123 (EndUser), admin@example.com (Admin).
-        </Typography>
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-        <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <TextField label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          <TextField
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          <Button type="submit" variant="contained" disabled={busy}>
-            Sign in
-          </Button>
-        </Box>
-      </Paper>
-    </Box>
+    <div className="page page-center">
+      <div className="container container-tight py-4">
+        <div className="card card-md">
+          <div className="card-body">
+            <h2 className="card-title text-center mb-4">Sign in</h2>
+            <p className="text-secondary text-center small mb-4">
+              Demo: user@example.com / password123 · admin@example.com (Admin)
+            </p>
+            {error && <div className="alert alert-danger mb-3">{error}</div>}
+            <form onSubmit={handleSubmit} autoComplete="off">
+              <div className="mb-3">
+                <label className="form-label">Email</label>
+                <input
+                  type="email"
+                  className="form-control"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="mb-3">
+                <label className="form-label">Password</label>
+                <input
+                  type="password"
+                  className="form-control"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="form-footer">
+                <button type="submit" className="btn btn-primary w-100" disabled={busy}>
+                  {busy ? 'Signing in…' : 'Sign in'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

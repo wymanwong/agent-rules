@@ -1,4 +1,3 @@
-import { Box, Button, Card, CardActions, CardContent, TextField, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
@@ -32,30 +31,36 @@ export function KnowledgeListPage() {
   }, []);
 
   return (
-    <Box>
-      <Typography variant="h4" gutterBottom>
-        Knowledge Base
-      </Typography>
-      <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
-        <TextField label="Category" value={category} onChange={(e) => setCategory(e.target.value)} />
-        <TextField label="Search" value={search} onChange={(e) => setSearch(e.target.value)} />
-        <Button variant="contained" onClick={() => void load()}>
-          Apply
-        </Button>
-      </Box>
+    <>
+      <div className="page-header mb-4">
+        <h2 className="page-title">Knowledge Base</h2>
+      </div>
+      <div className="row g-2 mb-3">
+        <div className="col-md-4">
+          <input type="text" className="form-control" placeholder="Category" value={category} onChange={(e) => setCategory(e.target.value)} />
+        </div>
+        <div className="col-md-4">
+          <input type="search" className="form-control" placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+        <div className="col-md-4">
+          <button type="button" className="btn btn-primary" onClick={() => void load()}>
+            Apply
+          </button>
+        </div>
+      </div>
       {articles.map((a) => (
-        <Card key={a.id} sx={{ mb: 2 }} variant="outlined">
-          <CardContent>
-            <Typography variant="h6">{a.title}</Typography>
-            <Typography variant="caption" color="text.secondary">
-              {a.category ?? 'General'}
-            </Typography>
-          </CardContent>
-          <CardActions>
-            <Button onClick={() => navigate(`/knowledge/${a.id}`)}>Read</Button>
-          </CardActions>
-        </Card>
+        <div key={a.id} className="card mb-3">
+          <div className="card-body">
+            <h3 className="card-title">{a.title}</h3>
+            <p className="text-secondary small mb-0">{a.category ?? 'General'}</p>
+          </div>
+          <div className="card-footer">
+            <button type="button" className="btn btn-sm btn-primary" onClick={() => navigate(`/knowledge/${a.id}`)}>
+              Read
+            </button>
+          </div>
+        </div>
       ))}
-    </Box>
+    </>
   );
 }

@@ -1,4 +1,3 @@
-import { Box, Button, Card, CardActions, CardContent, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
@@ -19,31 +18,25 @@ export function CatalogPage() {
   }, []);
 
   return (
-    <Box>
-      <Typography variant="h4" gutterBottom>
-        Service Catalog
-      </Typography>
-      <Typography color="text.secondary" sx={{ mb: 3 }}>
-        Choose a standard service request. Some items require manager approval.
-      </Typography>
+    <>
+      <div className="page-header mb-4">
+        <h2 className="page-title">Service Catalog</h2>
+        <div className="text-secondary">Choose a standard service request. Some items require approval.</div>
+      </div>
       {items.map((it) => (
-        <Card key={it.id} sx={{ mb: 2 }} variant="outlined">
-          <CardContent>
-            <Typography variant="h6">{it.name}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {it.description}
-            </Typography>
-            {it.requires_manager_approval === 1 && (
-              <Typography variant="caption" color="warning.main">
-                Requires approval
-              </Typography>
-            )}
-          </CardContent>
-          <CardActions>
-            <Button onClick={() => navigate(`/catalog/${it.id}`)}>Request</Button>
-          </CardActions>
-        </Card>
+        <div key={it.id} className="card mb-3">
+          <div className="card-body">
+            <h3 className="card-title">{it.name}</h3>
+            <p className="text-secondary mb-2">{it.description}</p>
+            {it.requires_manager_approval === 1 && <span className="badge bg-warning text-warning-fg">Requires approval</span>}
+          </div>
+          <div className="card-footer">
+            <button type="button" className="btn btn-primary btn-sm" onClick={() => navigate(`/catalog/${it.id}`)}>
+              Request
+            </button>
+          </div>
+        </div>
       ))}
-    </Box>
+    </>
   );
 }

@@ -4,7 +4,7 @@ A collection of reusable rules and knowledge documents for AI coding assistants 
 
 ## IT Helpdesk demo application
 
-A full-stack ITIL-style ticketing demo (SQLite, Node/Express/TypeScript, React/MUI/Vite) lives under `backend/` and `frontend/`. See **[docs/it-helpdesk-system.md](./docs/it-helpdesk-system.md)** for setup, scripts, and architecture.
+A full-stack ITIL-style ticketing demo (SQLite, Node/Express/TypeScript, React/Vite + [Tabler UI](https://github.com/tabler/tabler)) lives under `backend/` and `frontend/`. See **[docs/it-helpdesk-system.md](./docs/it-helpdesk-system.md)** for setup, scripts, and architecture.
 
 ## Repository Structure
 

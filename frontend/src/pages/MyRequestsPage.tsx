@@ -1,17 +1,3 @@
-import {
-  Box,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  TextField,
-  Typography,
-} from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
@@ -56,64 +42,63 @@ export function MyRequestsPage() {
   }, []);
 
   return (
-    <Box>
-      <Typography variant="h4" gutterBottom>
-        My Requests
-      </Typography>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
-        <FormControl sx={{ minWidth: 140 }}>
-          <InputLabel>Type</InputLabel>
-          <Select label="Type" value={type} onChange={(e) => setType(e.target.value)}>
-            <MenuItem value="">Any</MenuItem>
-            <MenuItem value="Incident">Incident</MenuItem>
-            <MenuItem value="ServiceRequest">Service Request</MenuItem>
-          </Select>
-        </FormControl>
-        <TextField label="Status" value={status} onChange={(e) => setStatus(e.target.value)} />
-        <TextField label="Category" value={category} onChange={(e) => setCategory(e.target.value)} />
-        <TextField
-          label="Created from"
-          type="date"
-          slotProps={{ inputLabel: { shrink: true } }}
-          value={createdFrom}
-          onChange={(e) => setCreatedFrom(e.target.value)}
-        />
-        <TextField
-          label="Created to"
-          type="date"
-          slotProps={{ inputLabel: { shrink: true } }}
-          value={createdTo}
-          onChange={(e) => setCreatedTo(e.target.value)}
-        />
-        <TextField label="Search" value={search} onChange={(e) => setSearch(e.target.value)} />
-      </Box>
-      <button type="button" onClick={() => void load()} style={{ marginBottom: 16 }}>
+    <>
+      <div className="page-header mb-4">
+        <h2 className="page-title">My Requests</h2>
+      </div>
+      <div className="row g-2 mb-3">
+        <div className="col-md-2">
+          <select className="form-select form-select-sm" value={type} onChange={(e) => setType(e.target.value)}>
+            <option value="">Any type</option>
+            <option value="Incident">Incident</option>
+            <option value="ServiceRequest">Service Request</option>
+          </select>
+        </div>
+        <div className="col-md-2">
+          <input type="text" className="form-control form-control-sm" placeholder="Status" value={status} onChange={(e) => setStatus(e.target.value)} />
+        </div>
+        <div className="col-md-2">
+          <input type="text" className="form-control form-control-sm" placeholder="Category" value={category} onChange={(e) => setCategory(e.target.value)} />
+        </div>
+        <div className="col-md-2">
+          <input type="date" className="form-control form-control-sm" value={createdFrom} onChange={(e) => setCreatedFrom(e.target.value)} />
+        </div>
+        <div className="col-md-2">
+          <input type="date" className="form-control form-control-sm" value={createdTo} onChange={(e) => setCreatedTo(e.target.value)} />
+        </div>
+        <div className="col-md-2">
+          <input type="search" className="form-control form-control-sm" placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+      </div>
+      <button type="button" className="btn btn-outline-primary btn-sm mb-3" onClick={() => void load()}>
         Apply filters
       </button>
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell>Number</TableCell>
-            <TableCell>Title</TableCell>
-            <TableCell>Type</TableCell>
-            <TableCell>Status</TableCell>
-            <TableCell>Priority</TableCell>
-            <TableCell>Created</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {tickets.map((t) => (
-            <TableRow key={t.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/tickets/${t.id}`)}>
-              <TableCell>{t.ticket_number}</TableCell>
-              <TableCell>{t.title}</TableCell>
-              <TableCell>{t.type}</TableCell>
-              <TableCell>{t.status}</TableCell>
-              <TableCell>{t.priority}</TableCell>
-              <TableCell>{new Date(t.created_at).toLocaleString()}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Box>
+      <div className="table-responsive">
+        <table className="table table-vcenter card-table table-striped">
+          <thead>
+            <tr>
+              <th>Number</th>
+              <th>Title</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Priority</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tickets.map((t) => (
+              <tr key={t.id} role="button" className="cursor-pointer" onClick={() => navigate(`/tickets/${t.id}`)}>
+                <td>{t.ticket_number}</td>
+                <td>{t.title}</td>
+                <td>{t.type}</td>
+                <td>{t.status}</td>
+                <td>{t.priority}</td>
+                <td>{new Date(t.created_at).toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }

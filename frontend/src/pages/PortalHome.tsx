@@ -1,4 +1,3 @@
-import { Box, Button, Card, CardActions, CardContent, Stack, TextField, Typography } from '@mui/material';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
@@ -35,114 +34,113 @@ export function PortalHome() {
   }
 
   return (
-    <Box>
-      <Typography variant="h4" gutterBottom>
-        Self-Service Portal
-      </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-        Search knowledge, report incidents, or request services from the catalog.
-      </Typography>
+    <>
+      <div className="page-header d-print-none mb-4">
+        <div className="row align-items-center">
+          <div className="col">
+            <h2 className="page-title">Self-Service Portal</h2>
+            <div className="text-secondary">Search knowledge, report incidents, or request services from the catalog.</div>
+          </div>
+        </div>
+      </div>
 
-      <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
-        <TextField
-          fullWidth
-          label="Search knowledge & my tickets"
+      <div className="input-group mb-4">
+        <input
+          type="search"
+          className="form-control"
+          placeholder="Search knowledge & my tickets"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && void search()}
         />
-        <Button variant="contained" onClick={() => void search()}>
+        <button type="button" className="btn btn-primary" onClick={() => void search()}>
           Search
-        </Button>
-      </Box>
+        </button>
+      </div>
 
       {(articles.length > 0 || ticketHits.length > 0) && (
-        <Stack sx={{ flexDirection: 'row', flexWrap: 'wrap', gap: 2, mb: 3 }}>
+        <div className="row row-cards mb-4">
           {articles.map((a) => (
-            <Box key={`kb-${a.id}`} sx={{ width: { xs: '100%', sm: 'calc(50% - 8px)', md: 'calc(33.33% - 11px)' } }}>
-              <Card variant="outlined">
-                <CardContent>
-                  <Typography variant="subtitle1">{a.title}</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {a.category ?? 'General'}
-                  </Typography>
-                </CardContent>
-                <CardActions>
-                  <Button size="small" onClick={() => navigate(`/knowledge/${a.id}`)}>
+            <div key={`kb-${a.id}`} className="col-sm-6 col-lg-4">
+              <div className="card">
+                <div className="card-body">
+                  <h3 className="card-title">{a.title}</h3>
+                  <p className="text-secondary small mb-0">{a.category ?? 'General'}</p>
+                </div>
+                <div className="card-footer">
+                  <button type="button" className="btn btn-sm btn-primary" onClick={() => navigate(`/knowledge/${a.id}`)}>
                     Open
-                  </Button>
-                </CardActions>
-              </Card>
-            </Box>
+                  </button>
+                </div>
+              </div>
+            </div>
           ))}
           {ticketHits.map((t) => (
-            <Box key={`tk-${t.id}`} sx={{ width: { xs: '100%', sm: 'calc(50% - 8px)', md: 'calc(33.33% - 11px)' } }}>
-              <Card variant="outlined">
-                <CardContent>
-                  <Typography variant="subtitle2">{t.ticket_number}</Typography>
-                  <Typography variant="body2">{t.title}</Typography>
-                </CardContent>
-                <CardActions>
-                  <Button size="small" onClick={() => navigate(`/tickets/${t.id}`)}>
+            <div key={`tk-${t.id}`} className="col-sm-6 col-lg-4">
+              <div className="card">
+                <div className="card-body">
+                  <div className="text-secondary small">{t.ticket_number}</div>
+                  <div>{t.title}</div>
+                </div>
+                <div className="card-footer">
+                  <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => navigate(`/tickets/${t.id}`)}>
                     View
-                  </Button>
-                </CardActions>
-              </Card>
-            </Box>
+                  </button>
+                </div>
+              </div>
+            </div>
           ))}
-        </Stack>
+        </div>
       )}
 
-      <Stack sx={{ flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
-        <Card sx={{ flex: 1 }}>
-          <CardContent>
-            <Typography variant="h6">Report an Incident</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Something is broken — we prioritize restoration.
-            </Typography>
-          </CardContent>
-          <CardActions>
-            <Button variant="contained" onClick={() => navigate('/incidents/new')} disabled={!user}>
-              Start
-            </Button>
-          </CardActions>
-        </Card>
-        <Card sx={{ flex: 1 }}>
-          <CardContent>
-            <Typography variant="h6">Request a Service</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Standard requests from the service catalog.
-            </Typography>
-          </CardContent>
-          <CardActions>
-            <Button variant="contained" color="secondary" onClick={() => navigate('/catalog')} disabled={!user}>
-              Browse catalog
-            </Button>
-          </CardActions>
-        </Card>
-        <Card sx={{ flex: 1 }}>
-          <CardContent>
-            <Typography variant="h6">Knowledge Base</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Self-help articles and guides.
-            </Typography>
-          </CardContent>
-          <CardActions>
-            <Button onClick={() => navigate('/knowledge')}>Browse</Button>
-          </CardActions>
-        </Card>
-      </Stack>
+      <div className="row row-cards">
+        <div className="col-md-4 mb-3 mb-md-0">
+          <div className="card h-100">
+            <div className="card-body">
+              <h3 className="card-title">Report an Incident</h3>
+              <p className="text-secondary">Something is broken — we prioritize restoration.</p>
+            </div>
+            <div className="card-footer">
+              <button type="button" className="btn btn-primary" onClick={() => navigate('/incidents/new')} disabled={!user}>
+                Start
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="col-md-4 mb-3 mb-md-0">
+          <div className="card h-100">
+            <div className="card-body">
+              <h3 className="card-title">Request a Service</h3>
+              <p className="text-secondary">Standard requests from the service catalog.</p>
+            </div>
+            <div className="card-footer">
+              <button type="button" className="btn btn-azure" onClick={() => navigate('/catalog')} disabled={!user}>
+                Browse catalog
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="col-md-4">
+          <div className="card h-100">
+            <div className="card-body">
+              <h3 className="card-title">Knowledge Base</h3>
+              <p className="text-secondary">Self-help articles and guides.</p>
+            </div>
+            <div className="card-footer">
+              <button type="button" className="btn btn-outline-primary" onClick={() => navigate('/knowledge')}>
+                Browse
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      {!user && (
-        <Typography sx={{ mt: 3 }} color="text.secondary">
-          Sign in to create tickets and browse personalized results.
-        </Typography>
-      )}
+      {!user && <p className="text-secondary mt-4">Sign in to create tickets and browse personalized results.</p>}
       {user?.role === 'Admin' && (
-        <Typography sx={{ mt: 2 }} variant="caption" color="text.secondary">
+        <p className="text-secondary small mt-3 mb-0">
           Admin tip: Knowledge search includes unpublished articles when logged in as Admin.
-        </Typography>
+        </p>
       )}
-    </Box>
+    </>
   );
 }

@@ -1,20 +1,6 @@
-import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
-import {
-  Alert,
-  Box,
-  Button,
-  Divider,
-  FormControl,
-  FormControlLabel,
-  InputLabel,
-  MenuItem,
-  Select,
-  Switch,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { IconTrash } from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
-import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../api';
 import type { CatalogItemDto } from './AdminCatalogListPage';
 import { CatalogExtraQuestionsEditor, type ExtraQuestionRow } from './CatalogExtraQuestionsEditor';
@@ -143,134 +129,117 @@ export function AdminCatalogConfigurePage() {
   }
 
   if (loading) {
-    return <Typography>Loading…</Typography>;
+    return <div className="text-secondary">Loading…</div>;
   }
 
   if (!isNew && Number.isNaN(idNum)) {
-    return <Alert severity="error">Invalid catalog item ID.</Alert>;
+    return <div className="alert alert-danger">Invalid catalog item ID.</div>;
   }
 
   return (
-    <Box component="form" onSubmit={handleSave} sx={{ maxWidth: 720 }}>
-      <Typography variant="h4" gutterBottom>
-        {isNew ? 'New catalog item' : `Configure catalog item #${idNum}`}
-      </Typography>
-      <Button component={RouterLink} to="/admin/catalog" sx={{ mb: 2 }}>
+    <>
+      <div className="page-header mb-4">
+        <h2 className="page-title">{isNew ? 'New catalog item' : `Configure catalog item #${idNum}`}</h2>
+      </div>
+      <Link to="/admin/catalog" className="btn btn-outline-secondary btn-sm mb-3">
         ← Back to catalog list
-      </Button>
+      </Link>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
+      {error && <div className="alert alert-danger">{error}</div>}
 
-      <TextField label="Name" fullWidth required value={name} onChange={(e) => setName(e.target.value)} sx={{ mb: 2 }} />
-      <TextField
-        label="Description"
-        fullWidth
-        required
-        multiline
-        minRows={3}
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        sx={{ mb: 2 }}
-      />
+      <form onSubmit={handleSave} className="row g-3" style={{ maxWidth: 720 }}>
+        <div className="col-12">
+          <label className="form-label required">Name</label>
+          <input type="text" className="form-control" value={name} onChange={(e) => setName(e.target.value)} required />
+        </div>
+        <div className="col-12">
+          <label className="form-label required">Description</label>
+          <textarea className="form-control" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} required />
+        </div>
+        <div className="col-12">
+          <label className="form-label">Type</label>
+          <select className="form-select" value={type} onChange={(e) => setType(e.target.value)}>
+            <option value="ServiceRequest">ServiceRequest</option>
+          </select>
+        </div>
 
-      <FormControl fullWidth sx={{ mb: 2 }}>
-        <InputLabel>Type</InputLabel>
-        <Select label="Type" value={type} onChange={(e) => setType(e.target.value)}>
-          <MenuItem value="ServiceRequest">ServiceRequest</MenuItem>
-        </Select>
-      </FormControl>
-
-      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-        Ticket defaults (applied when a user submits this catalog request)
-      </Typography>
-      <TextField
-        label="Default category"
-        fullWidth
-        value={defaultCategory}
-        onChange={(e) => setDefaultCategory(e.target.value)}
-        sx={{ mb: 2 }}
-      />
-      <TextField
-        label="Default subcategory"
-        fullWidth
-        value={defaultSubcategory}
-        onChange={(e) => setDefaultSubcategory(e.target.value)}
-        sx={{ mb: 2 }}
-      />
-
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
-        <FormControl sx={{ minWidth: 200, flex: '1 1 200px' }}>
-          <InputLabel>Default impact</InputLabel>
-          <Select
-            label="Default impact"
-            value={defaultImpact}
-            onChange={(e) => setDefaultImpact(e.target.value as (typeof IMPACTS)[number])}
-          >
+        <div className="col-12">
+          <hr />
+          <h4 className="mb-3">Ticket defaults</h4>
+        </div>
+        <div className="col-md-6">
+          <label className="form-label">Default category</label>
+          <input type="text" className="form-control" value={defaultCategory} onChange={(e) => setDefaultCategory(e.target.value)} />
+        </div>
+        <div className="col-md-6">
+          <label className="form-label">Default subcategory</label>
+          <input type="text" className="form-control" value={defaultSubcategory} onChange={(e) => setDefaultSubcategory(e.target.value)} />
+        </div>
+        <div className="col-md-4">
+          <label className="form-label">Default impact</label>
+          <select className="form-select" value={defaultImpact} onChange={(e) => setDefaultImpact(e.target.value as (typeof IMPACTS)[number])}>
             {IMPACTS.map((i) => (
-              <MenuItem key={i} value={i}>
+              <option key={i} value={i}>
                 {i}
-              </MenuItem>
+              </option>
             ))}
-          </Select>
-        </FormControl>
-        <FormControl sx={{ minWidth: 200, flex: '1 1 200px' }}>
-          <InputLabel>Default urgency</InputLabel>
-          <Select
-            label="Default urgency"
-            value={defaultUrgency}
-            onChange={(e) => setDefaultUrgency(e.target.value as (typeof URGENCIES)[number])}
-          >
+          </select>
+        </div>
+        <div className="col-md-4">
+          <label className="form-label">Default urgency</label>
+          <select className="form-select" value={defaultUrgency} onChange={(e) => setDefaultUrgency(e.target.value as (typeof URGENCIES)[number])}>
             {URGENCIES.map((u) => (
-              <MenuItem key={u} value={u}>
+              <option key={u} value={u}>
                 {u}
-              </MenuItem>
+              </option>
             ))}
-          </Select>
-        </FormControl>
-        <FormControl sx={{ minWidth: 200, flex: '1 1 200px' }}>
-          <InputLabel>Default priority</InputLabel>
-          <Select label="Default priority" value={defaultPriority} onChange={(e) => setDefaultPriority(e.target.value)}>
-            <MenuItem value="">Derive from impact × urgency</MenuItem>
+          </select>
+        </div>
+        <div className="col-md-4">
+          <label className="form-label">Default priority</label>
+          <select className="form-select" value={defaultPriority} onChange={(e) => setDefaultPriority(e.target.value)}>
+            <option value="">Derive from impact × urgency</option>
             {PRIORITIES.filter(Boolean).map((p) => (
-              <MenuItem key={p} value={p}>
+              <option key={p} value={p}>
                 {p}
-              </MenuItem>
+              </option>
             ))}
-          </Select>
-        </FormControl>
-      </Box>
+          </select>
+        </div>
 
-      <FormControlLabel
-        control={<Switch checked={requiresApproval} onChange={(e) => setRequiresApproval(e.target.checked)} />}
-        label="Requires manager approval (pending approval workflow)"
-        sx={{ display: 'block', mb: 1 }}
-      />
-      <FormControlLabel
-        control={<Switch checked={isPublished} onChange={(e) => setIsPublished(e.target.checked)} />}
-        label="Published (visible on self-service catalog)"
-        sx={{ display: 'block', mb: 2 }}
-      />
+        <div className="col-12">
+          <label className="form-check">
+            <input type="checkbox" className="form-check-input" checked={requiresApproval} onChange={(e) => setRequiresApproval(e.target.checked)} />
+            <span className="form-check-label">Requires manager approval</span>
+          </label>
+        </div>
+        <div className="col-12">
+          <label className="form-check">
+            <input type="checkbox" className="form-check-input" checked={isPublished} onChange={(e) => setIsPublished(e.target.checked)} />
+            <span className="form-check-label">Published on self-service catalog</span>
+          </label>
+        </div>
 
-      <Divider sx={{ my: 2 }} />
-      <CatalogExtraQuestionsEditor value={extraQuestions} onChange={setExtraQuestions} />
+        <div className="col-12">
+          <hr />
+          <CatalogExtraQuestionsEditor value={extraQuestions} onChange={setExtraQuestions} />
+        </div>
 
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-        <Button type="submit" variant="contained">
-          Save
-        </Button>
-        <Button component={RouterLink} to="/admin/catalog" variant="outlined">
-          Cancel
-        </Button>
-        {!isNew && (
-          <Button type="button" color="error" variant="outlined" startIcon={<DeleteOutlinedIcon />} onClick={() => void handleDelete()}>
-            Delete
-          </Button>
-        )}
-      </Box>
-    </Box>
+        <div className="col-12 btn-list">
+          <button type="submit" className="btn btn-primary">
+            Save
+          </button>
+          <Link to="/admin/catalog" className="btn btn-outline-secondary">
+            Cancel
+          </Link>
+          {!isNew && (
+            <button type="button" className="btn btn-outline-danger" onClick={() => void handleDelete()}>
+              <IconTrash size={18} className="me-1" />
+              Delete
+            </button>
+          )}
+        </div>
+      </form>
+    </>
   );
 }

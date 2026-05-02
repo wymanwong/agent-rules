@@ -1,4 +1,3 @@
-import { Box, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../api';
@@ -20,17 +19,23 @@ export function KnowledgeDetailPage() {
     void api<{ article: Article }>(`/knowledge/articles/${id}`).then((r) => setArticle(r.article));
   }, [id]);
 
-  if (!article) return <Typography>Loading…</Typography>;
+  if (!article) return <div className="text-secondary">Loading…</div>;
 
   return (
-    <Box>
-      <Typography variant="h4" gutterBottom>
-        {article.title}
-      </Typography>
-      <Typography variant="caption" color="text.secondary" gutterBottom sx={{ display: 'block' }}>
-        {article.category ?? 'General'} · {article.tags ?? ''}
-      </Typography>
-      <Typography sx={{ whiteSpace: 'pre-wrap' }}>{article.body}</Typography>
-    </Box>
+    <>
+      <div className="page-header mb-4">
+        <h2 className="page-title">{article.title}</h2>
+        <div className="text-secondary small">
+          {article.category ?? 'General'} · {article.tags ?? ''}
+        </div>
+      </div>
+      <div className="card">
+        <div className="card-body">
+          <div className="markdown" style={{ whiteSpace: 'pre-wrap' }}>
+            {article.body}
+          </div>
+        </div>
+      </div>
+    </>
   );
 }

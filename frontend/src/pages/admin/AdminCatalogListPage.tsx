@@ -1,21 +1,6 @@
-import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import {
-  Alert,
-  Box,
-  Button,
-  Chip,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Typography,
-} from '@mui/material';
+import { IconEdit, IconPlus } from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { api } from '../../api';
 
 export interface CatalogItemDto {
@@ -52,91 +37,83 @@ export function AdminCatalogListPage() {
   }, []);
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2, mb: 3 }}>
-        <Typography variant="h4" sx={{ flexGrow: 1 }}>
-          Service Catalog
-        </Typography>
-        <Button variant="outlined" component={RouterLink} to="/admin">
-          Back to Admin
-        </Button>
-        <Button variant="contained" startIcon={<AddIcon />} component={RouterLink} to="/admin/catalog/new">
-          New catalog item
-        </Button>
-      </Box>
+    <>
+      <div className="page-header d-print-none mb-4">
+        <div className="row align-items-center">
+          <div className="col">
+            <h2 className="page-title">Service Catalog</h2>
+            <div className="text-secondary">
+              Configure offerings, defaults, approval, and extra questions for the self-service portal.
+            </div>
+          </div>
+          <div className="col-auto ms-auto btn-list">
+            <Link to="/admin" className="btn btn-outline-secondary">
+              Back to Admin
+            </Link>
+            <Link to="/admin/catalog/new" className="btn btn-primary">
+              <IconPlus size={18} className="me-1" />
+              New catalog item
+            </Link>
+          </div>
+        </div>
+      </div>
 
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Configure offerings shown on the self-service portal: defaults for tickets, optional approval, and extra form fields
-        (JSON schema).
-      </Typography>
+      {error && <div className="alert alert-danger">{error}</div>}
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>ID</TableCell>
-              <TableCell>Name</TableCell>
-              <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Category</TableCell>
-              <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Impact / Urgency</TableCell>
-              <TableCell>Published</TableCell>
-              <TableCell>Approval</TableCell>
-              <TableCell align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {items.map((row) => (
-              <TableRow key={row.id} hover>
-                <TableCell>{row.id}</TableCell>
-                <TableCell>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {row.name}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'block', md: 'none' } }}>
+      <div className="card">
+        <div className="table-responsive">
+          <table className="table table-vcenter card-table table-striped">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th className="d-none d-md-table-cell">Category</th>
+                <th className="d-none d-sm-table-cell">Impact / Urgency</th>
+                <th>Published</th>
+                <th>Approval</th>
+                <th className="w-1" />
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((row) => (
+                <tr key={row.id}>
+                  <td>{row.id}</td>
+                  <td>
+                    <div className="fw-medium">{row.name}</div>
+                    <div className="text-secondary small d-md-none">
+                      {[row.default_category, row.default_subcategory].filter(Boolean).join(' · ') || '—'}
+                    </div>
+                  </td>
+                  <td className="d-none d-md-table-cell">
                     {[row.default_category, row.default_subcategory].filter(Boolean).join(' · ') || '—'}
-                  </Typography>
-                </TableCell>
-                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
-                  {[row.default_category, row.default_subcategory].filter(Boolean).join(' · ') || '—'}
-                </TableCell>
-                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
-                  {(row.default_impact ?? '—') + ' / ' + (row.default_urgency ?? '—')}
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    size="small"
-                    label={row.is_published === 1 ? 'Yes' : 'No'}
-                    color={row.is_published === 1 ? 'success' : 'default'}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    size="small"
-                    label={row.requires_manager_approval === 1 ? 'Required' : 'No'}
-                    variant="outlined"
-                  />
-                </TableCell>
-                <TableCell align="right">
-                  <Button size="small" startIcon={<EditIcon />} component={RouterLink} to={`/admin/catalog/${row.id}`}>
-                    Configure
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                  </td>
+                  <td className="d-none d-sm-table-cell">
+                    {(row.default_impact ?? '—') + ' / ' + (row.default_urgency ?? '—')}
+                  </td>
+                  <td>
+                    <span className={`badge ${row.is_published === 1 ? 'bg-success' : 'bg-secondary'}`}>
+                      {row.is_published === 1 ? 'Yes' : 'No'}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`badge ${row.requires_manager_approval === 1 ? 'bg-warning text-warning-fg' : 'bg-secondary-lt'}`}>
+                      {row.requires_manager_approval === 1 ? 'Required' : 'No'}
+                    </span>
+                  </td>
+                  <td>
+                    <Link className="btn btn-sm btn-primary" to={`/admin/catalog/${row.id}`}>
+                      <IconEdit size={16} className="me-1" />
+                      Configure
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-      {items.length === 0 && !error && (
-        <Typography color="text.secondary" sx={{ mt: 2 }}>
-          No items yet. Create one to appear on the portal (when published).
-        </Typography>
-      )}
-    </Box>
+      {items.length === 0 && !error && <p className="text-secondary mt-3">No items yet. Create one and publish it for the portal.</p>}
+    </>
   );
 }

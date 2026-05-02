@@ -1,16 +1,4 @@
-import Add from '@mui/icons-material/Add';
-import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
-import {
-  Box,
-  Button,
-  FormControl,
-  IconButton,
-  InputLabel,
-  MenuItem,
-  Select,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { IconTrash } from '@tabler/icons-react';
 
 export interface ExtraQuestionRow {
   key: string;
@@ -23,7 +11,6 @@ interface Props {
   onChange: (rows: ExtraQuestionRow[]) => void;
 }
 
-/** Simple catalog form builder — no JSON required */
 export function CatalogExtraQuestionsEditor({ value, onChange }: Props) {
   function updateRow(index: number, patch: Partial<ExtraQuestionRow>) {
     const next = [...value];
@@ -40,66 +27,60 @@ export function CatalogExtraQuestionsEditor({ value, onChange }: Props) {
   }
 
   return (
-    <Box sx={{ mb: 2 }}>
-      <Typography variant="subtitle2" gutterBottom>
-        Extra questions for requesters
-      </Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-        Add one row per question. <strong>Question label</strong> is what users see. <strong>Field key</strong> is optional —
-        leave blank and we generate one from the label (for storing answers).
-      </Typography>
+    <div className="mb-4">
+      <h4 className="mb-2">Extra questions for requesters</h4>
+      <p className="text-secondary small mb-3">
+        Add one row per question. <strong>Question label</strong> is what users see. <strong>Field key</strong> is optional — leave blank and we generate one from the label.
+      </p>
 
       {value.map((row, index) => (
-        <Box
-          key={index}
-          sx={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 2,
-            alignItems: 'flex-start',
-            mb: 2,
-            p: 2,
-            border: '1px solid',
-            borderColor: 'divider',
-            borderRadius: 1,
-          }}
-        >
-          <TextField
-            label="Question label"
-            size="small"
-            sx={{ flex: '2 1 200px', minWidth: 160 }}
-            value={row.label}
-            onChange={(e) => updateRow(index, { label: e.target.value })}
-            required
-          />
-          <TextField
-            label="Field key (optional)"
-            size="small"
-            sx={{ flex: '1 1 140px', minWidth: 120 }}
-            value={row.key}
-            onChange={(e) => updateRow(index, { key: e.target.value })}
-            placeholder="auto"
-          />
-          <FormControl size="small" sx={{ minWidth: 160 }}>
-            <InputLabel>Answer type</InputLabel>
-            <Select
-              label="Answer type"
-              value={row.kind}
-              onChange={(e) => updateRow(index, { kind: e.target.value as ExtraQuestionRow['kind'] })}
-            >
-              <MenuItem value="short_text">Short answer (one line)</MenuItem>
-              <MenuItem value="paragraph">Paragraph (several lines)</MenuItem>
-            </Select>
-          </FormControl>
-          <IconButton aria-label="remove question" onClick={() => removeRow(index)} color="error">
-            <DeleteOutlinedIcon />
-          </IconButton>
-        </Box>
+        <div key={index} className="card mb-3">
+          <div className="card-body">
+            <div className="row g-2 align-items-end">
+              <div className="col-md-5">
+                <label className="form-label required">Question label</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={row.label}
+                  onChange={(e) => updateRow(index, { label: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="col-md-3">
+                <label className="form-label">Field key (optional)</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={row.key}
+                  onChange={(e) => updateRow(index, { key: e.target.value })}
+                  placeholder="auto"
+                />
+              </div>
+              <div className="col-md-3">
+                <label className="form-label">Answer type</label>
+                <select
+                  className="form-select"
+                  value={row.kind}
+                  onChange={(e) => updateRow(index, { kind: e.target.value as ExtraQuestionRow['kind'] })}
+                >
+                  <option value="short_text">Short answer (one line)</option>
+                  <option value="paragraph">Paragraph (several lines)</option>
+                </select>
+              </div>
+              <div className="col-md-1 text-end">
+                <button type="button" className="btn btn-icon btn-outline-danger" aria-label="Remove" onClick={() => removeRow(index)}>
+                  <IconTrash size={20} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       ))}
 
-      <Button startIcon={<Add />} variant="outlined" size="small" onClick={addRow}>
+      <button type="button" className="btn btn-outline-primary btn-sm" onClick={addRow}>
         Add question
-      </Button>
-    </Box>
+      </button>
+    </div>
   );
 }

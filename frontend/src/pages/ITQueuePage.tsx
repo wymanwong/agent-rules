@@ -1,18 +1,3 @@
-import {
-  Box,
-  Button,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  TextField,
-  Typography,
-} from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
@@ -62,66 +47,71 @@ export function ITQueuePage() {
   }, []);
 
   return (
-    <Box>
-      <Typography variant="h4" gutterBottom>
-        IT Queue
-      </Typography>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
-        <TextField label="Status" size="small" value={status} onChange={(e) => setStatus(e.target.value)} />
-        <FormControl sx={{ minWidth: 120 }}>
-          <InputLabel>Priority</InputLabel>
-          <Select label="Priority" value={priority} onChange={(e) => setPriority(e.target.value)}>
-            <MenuItem value="">Any</MenuItem>
-            <MenuItem value="P1">P1</MenuItem>
-            <MenuItem value="P2">P2</MenuItem>
-            <MenuItem value="P3">P3</MenuItem>
-            <MenuItem value="P4">P4</MenuItem>
-          </Select>
-        </FormControl>
-        <FormControl sx={{ minWidth: 140 }}>
-          <InputLabel>Type</InputLabel>
-          <Select label="Type" value={type} onChange={(e) => setType(e.target.value)}>
-            <MenuItem value="">Any</MenuItem>
-            <MenuItem value="Incident">Incident</MenuItem>
-            <MenuItem value="ServiceRequest">Service Request</MenuItem>
-          </Select>
-        </FormControl>
-        <TextField label="Category" size="small" value={category} onChange={(e) => setCategory(e.target.value)} />
-        <FormControl sx={{ minWidth: 160 }}>
-          <InputLabel>Sort</InputLabel>
-          <Select label="Sort" value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
-            <MenuItem value="created_at">Created date</MenuItem>
-            <MenuItem value="due_at">Due date</MenuItem>
-          </Select>
-        </FormControl>
-        <Button variant="contained" onClick={() => void load()}>
-          Refresh
-        </Button>
-      </Box>
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell>Number</TableCell>
-            <TableCell>Title</TableCell>
-            <TableCell>Type</TableCell>
-            <TableCell>Status</TableCell>
-            <TableCell>Prio</TableCell>
-            <TableCell>Due</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {tickets.map((t) => (
-            <TableRow key={t.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/it/tickets/${t.id}`)}>
-              <TableCell>{t.ticket_number}</TableCell>
-              <TableCell>{t.title}</TableCell>
-              <TableCell>{t.type}</TableCell>
-              <TableCell>{t.status}</TableCell>
-              <TableCell>{t.priority}</TableCell>
-              <TableCell>{t.due_at ? new Date(t.due_at).toLocaleString() : '—'}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Box>
+    <>
+      <div className="page-header mb-4">
+        <h2 className="page-title">IT Queue</h2>
+      </div>
+      <div className="row g-2 mb-3">
+        <div className="col-md-2">
+          <input type="text" className="form-control form-control-sm" placeholder="Status" value={status} onChange={(e) => setStatus(e.target.value)} />
+        </div>
+        <div className="col-md-2">
+          <select className="form-select form-select-sm" value={priority} onChange={(e) => setPriority(e.target.value)}>
+            <option value="">Any priority</option>
+            <option value="P1">P1</option>
+            <option value="P2">P2</option>
+            <option value="P3">P3</option>
+            <option value="P4">P4</option>
+          </select>
+        </div>
+        <div className="col-md-2">
+          <select className="form-select form-select-sm" value={type} onChange={(e) => setType(e.target.value)}>
+            <option value="">Any type</option>
+            <option value="Incident">Incident</option>
+            <option value="ServiceRequest">Service Request</option>
+          </select>
+        </div>
+        <div className="col-md-2">
+          <input type="text" className="form-control form-control-sm" placeholder="Category" value={category} onChange={(e) => setCategory(e.target.value)} />
+        </div>
+        <div className="col-md-2">
+          <select className="form-select form-select-sm" value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
+            <option value="created_at">Sort: Created</option>
+            <option value="due_at">Sort: Due date</option>
+          </select>
+        </div>
+        <div className="col-md-2">
+          <button type="button" className="btn btn-primary btn-sm w-100" onClick={() => void load()}>
+            Refresh
+          </button>
+        </div>
+      </div>
+      <div className="table-responsive">
+        <table className="table table-vcenter card-table table-striped">
+          <thead>
+            <tr>
+              <th>Number</th>
+              <th>Title</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Prio</th>
+              <th>Due</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tickets.map((t) => (
+              <tr key={t.id} role="button" onClick={() => navigate(`/it/tickets/${t.id}`)}>
+                <td>{t.ticket_number}</td>
+                <td>{t.title}</td>
+                <td>{t.type}</td>
+                <td>{t.status}</td>
+                <td>{t.priority}</td>
+                <td>{t.due_at ? new Date(t.due_at).toLocaleString() : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }

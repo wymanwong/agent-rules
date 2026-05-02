@@ -1,7 +1,4 @@
-import AttachFileIcon from '@mui/icons-material/AttachFile';
-import CameraAltIcon from '@mui/icons-material/CameraAlt';
-import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
-import { Box, Button, Chip, IconButton, Stack, Tooltip, Typography } from '@mui/material';
+import { IconCamera, IconPaperclip, IconPhoto } from '@tabler/icons-react';
 import { useRef, useState } from 'react';
 
 const ACCEPT_COMMON =
@@ -10,11 +7,9 @@ const ACCEPT_COMMON =
 interface Props {
   files: File[];
   onFilesChange: (files: File[]) => void;
-  /** Optional hint text below chips */
   helperText?: string;
 }
 
-/** Pick files from disk or capture photo/video via camera where supported (mobile/desktop). */
 export function AttachmentPicker({ files, onFilesChange, helperText }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const captureInputRef = useRef<HTMLInputElement>(null);
@@ -36,15 +31,14 @@ export function AttachmentPicker({ files, onFilesChange, helperText }: Props) {
   }
 
   return (
-    <Box sx={{ mb: 2 }}>
-      <Typography variant="subtitle2" gutterBottom>
-        Attachments
-      </Typography>
-      <Stack sx={{ flexDirection: 'row', flexWrap: 'wrap', gap: 1, alignItems: 'center', mb: 1 }}>
+    <div className="mb-3">
+      <label className="form-label fw-medium">Attachments</label>
+      <div className="d-flex flex-wrap gap-2 mb-2">
         <input ref={fileInputRef} type="file" hidden multiple accept={ACCEPT_COMMON} onChange={(e) => addMore(e.target.files)} />
-        <Button size="small" variant="outlined" startIcon={<AttachFileIcon />} onClick={() => fileInputRef.current?.click()}>
+        <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => fileInputRef.current?.click()}>
+          <IconPaperclip size={18} className="me-1" />
           Add files
-        </Button>
+        </button>
         <input
           ref={captureInputRef}
           type="file"
@@ -53,34 +47,28 @@ export function AttachmentPicker({ files, onFilesChange, helperText }: Props) {
           {...(captureSupported ? { capture: 'environment' as const } : {})}
           onChange={(e) => addMore(e.target.files)}
         />
-        <Tooltip title={captureSupported ? 'Take a photo with camera' : 'Choose an image (camera capture where supported)'}>
-          <span>
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<PhotoCameraIcon />}
-              onClick={() => captureInputRef.current?.click()}
-            >
-              Camera / photo
-            </Button>
-          </span>
-        </Tooltip>
-        <Tooltip title="Some browsers open gallery instead of camera">
-          <IconButton size="small" color="primary" aria-label="capture alternate" onClick={() => captureInputRef.current?.click()}>
-            <CameraAltIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      </Stack>
-      {helperText && (
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-          {helperText}
-        </Typography>
-      )}
-      <Stack sx={{ flexDirection: 'row', flexWrap: 'wrap', gap: 0.5 }}>
+        <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => captureInputRef.current?.click()}>
+          <IconPhoto size={18} className="me-1" />
+          Camera / photo
+        </button>
+        <button
+          type="button"
+          className="btn btn-outline-primary btn-sm"
+          onClick={() => captureInputRef.current?.click()}
+          title="Alternate image picker"
+        >
+          <IconCamera size={18} />
+        </button>
+      </div>
+      {helperText && <div className="form-hint mb-2">{helperText}</div>}
+      <div className="d-flex flex-wrap gap-1">
         {files.map((f, i) => (
-          <Chip key={`${f.name}-${i}-${f.size}`} label={`${f.name} (${Math.round(f.size / 1024)} KB)`} onDelete={() => removeAt(i)} size="small" />
+          <span key={`${f.name}-${i}-${f.size}`} className="badge bg-secondary-lt text-secondary-fg">
+            {f.name} ({Math.round(f.size / 1024)} KB)
+            <button type="button" className="btn-close btn-close-sm ms-1" aria-label="Remove" onClick={() => removeAt(i)} />
+          </span>
         ))}
-      </Stack>
-    </Box>
+      </div>
+    </div>
   );
 }

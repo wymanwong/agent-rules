@@ -1,20 +1,5 @@
-import {
-  Alert,
-  Box,
-  Button,
-  Divider,
-  Tab,
-  Tabs,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  TextField,
-  Typography,
-} from '@mui/material';
 import { useEffect, useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { api } from '../api';
 
 interface UserRow {
@@ -37,7 +22,7 @@ interface ArticleRow {
 }
 
 export function AdminPage() {
-  const [tab, setTab] = useState(0);
+  const [tab, setTab] = useState<'users' | 'teams' | 'catalog' | 'kb'>('users');
   const [users, setUsers] = useState<UserRow[]>([]);
   const [teams, setTeams] = useState<TeamRow[]>([]);
   const [articles, setArticles] = useState<ArticleRow[]>([]);
@@ -85,154 +70,171 @@ export function AdminPage() {
   }
 
   return (
-    <Box>
-      <Typography variant="h4" gutterBottom>
-        Administration
-      </Typography>
-      {msg && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          {msg}
-        </Alert>
-      )}
-      <Tabs value={tab} onChange={(_, v) => setTab(v)}>
-        <Tab label="Users" />
-        <Tab label="Teams" />
-        <Tab label="Service catalog" />
-        <Tab label="Knowledge" />
-      </Tabs>
-      <Divider sx={{ mb: 2 }} />
+    <>
+      <div className="page-header mb-4">
+        <h2 className="page-title">Administration</h2>
+      </div>
+      {msg && <div className="alert alert-info">{msg}</div>}
 
-      {tab === 0 && (
-        <Box>
-          <Typography variant="subtitle1">Users</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Use API or seed script for full CRUD; here is a read-only list.
-          </Typography>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>ID</TableCell>
-                <TableCell>Name</TableCell>
-                <TableCell>Email</TableCell>
-                <TableCell>Role</TableCell>
-                <TableCell>Team</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {users.map((u) => (
-                <TableRow key={u.id}>
-                  <TableCell>{u.id}</TableCell>
-                  <TableCell>{u.name}</TableCell>
-                  <TableCell>{u.email}</TableCell>
-                  <TableCell>{u.role}</TableCell>
-                  <TableCell>{u.team_id ?? '—'}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Box>
-      )}
+      <ul className="nav nav-tabs mb-3">
+        <li className="nav-item">
+          <button type="button" className={`nav-link ${tab === 'users' ? 'active' : ''}`} onClick={() => setTab('users')}>
+            Users
+          </button>
+        </li>
+        <li className="nav-item">
+          <button type="button" className={`nav-link ${tab === 'teams' ? 'active' : ''}`} onClick={() => setTab('teams')}>
+            Teams
+          </button>
+        </li>
+        <li className="nav-item">
+          <button type="button" className={`nav-link ${tab === 'catalog' ? 'active' : ''}`} onClick={() => setTab('catalog')}>
+            Service catalog
+          </button>
+        </li>
+        <li className="nav-item">
+          <button type="button" className={`nav-link ${tab === 'kb' ? 'active' : ''}`} onClick={() => setTab('kb')}>
+            Knowledge
+          </button>
+        </li>
+      </ul>
 
-      {tab === 1 && (
-        <Box>
-          <StackRow>
-            <Button onClick={() => void refreshTeams()}>Refresh</Button>
-            <Button onClick={() => void seedTeam(`Team-${Date.now().toString(36)}`)}>Add sample team</Button>
-          </StackRow>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>ID</TableCell>
-                <TableCell>Name</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {teams.map((t) => (
-                <TableRow key={t.id}>
-                  <TableCell>{t.id}</TableCell>
-                  <TableCell>{t.name}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Box>
+      {tab === 'users' && (
+        <>
+          <p className="text-secondary">Read-only list; full user CRUD via API or seed script.</p>
+          <div className="table-responsive">
+            <table className="table table-vcenter card-table table-striped">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Team</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((u) => (
+                  <tr key={u.id}>
+                    <td>{u.id}</td>
+                    <td>{u.name}</td>
+                    <td>{u.email}</td>
+                    <td>{u.role}</td>
+                    <td>{u.team_id ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
-      {tab === 2 && (
-        <Box>
-          <Typography variant="subtitle1" gutterBottom>
-            Service catalog configuration
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Create, edit, publish, and set defaults for catalog offerings on the self-service portal.
-          </Typography>
-          <Button variant="contained" component={RouterLink} to="/admin/catalog">
+      {tab === 'teams' && (
+        <>
+          <div className="btn-list mb-3">
+            <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => void refreshTeams()}>
+              Refresh
+            </button>
+            <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => void seedTeam(`Team-${Date.now().toString(36)}`)}>
+              Add sample team
+            </button>
+          </div>
+          <div className="table-responsive">
+            <table className="table table-vcenter card-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                </tr>
+              </thead>
+              <tbody>
+                {teams.map((t) => (
+                  <tr key={t.id}>
+                    <td>{t.id}</td>
+                    <td>{t.name}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {tab === 'catalog' && (
+        <>
+          <p className="text-secondary mb-3">Configure catalog offerings for the self-service portal.</p>
+          <Link className="btn btn-primary" to="/admin/catalog">
             Open catalog admin
-          </Button>
-        </Box>
+          </Link>
+        </>
       )}
 
-      {tab === 3 && (
-        <Box>
-          <Button sx={{ mb: 2 }} onClick={() => void refreshKb()}>
+      {tab === 'kb' && (
+        <>
+          <button type="button" className="btn btn-outline-primary btn-sm mb-3" onClick={() => void refreshKb()}>
             Refresh
-          </Button>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>ID</TableCell>
-                <TableCell>Title</TableCell>
-                <TableCell>Published</TableCell>
-                <TableCell />
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {articles.map((a) => (
-                <TableRow key={a.id}>
-                  <TableCell>{a.id}</TableCell>
-                  <TableCell>{a.title}</TableCell>
-                  <TableCell>{a.is_published === 1 ? 'yes' : 'no'}</TableCell>
-                  <TableCell>
-                    <Button size="small" onClick={() => void toggleArticlePublished(a)}>
-                      Toggle
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <Typography variant="subtitle2" sx={{ mt: 3 }}>
-            Quick create article
-          </Typography>
+          </button>
+          <div className="table-responsive mb-4">
+            <table className="table table-vcenter card-table table-striped">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Title</th>
+                  <th>Published</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {articles.map((a) => (
+                  <tr key={a.id}>
+                    <td>{a.id}</td>
+                    <td>{a.title}</td>
+                    <td>{a.is_published === 1 ? 'yes' : 'no'}</td>
+                    <td>
+                      <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => void toggleArticlePublished(a)}>
+                        Toggle
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <h4 className="mb-2">Quick create article</h4>
           <MiniKbCreate onDone={() => void refreshKb()} />
-        </Box>
+        </>
       )}
-    </Box>
+    </>
   );
-}
-
-function StackRow({ children }: { children: React.ReactNode }) {
-  return <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>{children}</Box>;
 }
 
 function MiniKbCreate({ onDone }: { onDone: () => void }) {
   const [title, setTitle] = useState('New article');
   const [body, setBody] = useState('Body text');
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, maxWidth: 480 }}>
-      <TextField label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
-      <TextField label="Body" multiline minRows={3} value={body} onChange={(e) => setBody(e.target.value)} />
-      <Button
-        variant="contained"
-        onClick={() =>
-          void api('/knowledge/articles', {
-            method: 'POST',
-            json: { title, body, is_published: true },
-          }).then(onDone)
-        }
-      >
-        Create
-      </Button>
-    </Box>
+    <div className="row g-2" style={{ maxWidth: 480 }}>
+      <div className="col-12">
+        <label className="form-label">Title</label>
+        <input type="text" className="form-control" value={title} onChange={(e) => setTitle(e.target.value)} />
+      </div>
+      <div className="col-12">
+        <label className="form-label">Body</label>
+        <textarea className="form-control" rows={3} value={body} onChange={(e) => setBody(e.target.value)} />
+      </div>
+      <div className="col-12">
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() =>
+            void api('/knowledge/articles', {
+              method: 'POST',
+              json: { title, body, is_published: true },
+            }).then(onDone)
+          }
+        >
+          Create
+        </button>
+      </div>
+    </div>
   );
 }

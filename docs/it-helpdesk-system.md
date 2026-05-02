@@ -1,11 +1,11 @@
-# ITIL-Aligned Helpdesk (SQLite + Node + React + MUI)
+# ITIL-Aligned Helpdesk (SQLite + Node + React + Tabler)
 
-This workspace includes a demo internal ticketing stack: Express + TypeScript + `better-sqlite3`, and a Vite React (MUI) portal and IT console.
+This workspace includes a demo internal ticketing stack: Express + TypeScript + `better-sqlite3`, and a Vite React portal and IT console styled with **[Tabler](https://github.com/tabler/tabler)** (`@tabler/core`).
 
 ## Architecture
 
 - **Backend** (`backend/`): Layered layout under `src/` — `config`, `db`, `repositories`, `services`, `controllers`, `routes`, `middleware`. SQLite file from `DB_PATH` (default `./data/helpdesk.db`). JWT auth; RBAC for `EndUser`, `IT`, `Admin`.
-- **Frontend** (`frontend/`): React Router, MUI theme, `/login` and protected routes. Dev server proxies API paths to port 4000.
+- **Frontend** (`frontend/`): React Router; Tabler CSS/JS (`main.tsx`), Bootstrap 5 markup, `@tabler/icons-react`; `/login` and protected routes. Dev server proxies API paths to port 4000.
 - **Priority & SLA**: `backend/src/services/prioritySla.ts` derives `priority` (P1–P4) from impact × urgency and computes `due_at` (P1 +4h, P2 +8h, P3 +3d, P4 +5d).
 - **Workflow**: `backend/src/services/ticketWorkflow.ts` validates incident vs service-request statuses and transitions.
 

@@ -1,15 +1,3 @@
-import {
-  Alert,
-  Box,
-  Button,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
-  Stack,
-  TextField,
-  Typography,
-} from '@mui/material';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiMultipart } from '../api';
@@ -55,66 +43,71 @@ export function ReportIncidentPage() {
   }
 
   return (
-    <Box component="form" onSubmit={submit} sx={{ maxWidth: 720 }}>
-      <Typography variant="h4" gutterBottom>
-        Report an Incident
-      </Typography>
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-      <TextField label="Title" fullWidth required value={title} onChange={(e) => setTitle(e.target.value)} sx={{ mb: 2 }} />
-      <Stack sx={{ flexDirection: 'row', alignItems: 'center', gap: 1, mb: 1 }}>
-        <Typography variant="subtitle2">Description</Typography>
-        <VoiceToTextButton onAppend={(t) => setDescription((prev) => `${prev}${t}`)} />
-      </Stack>
-      <TextField
-        label="Describe what is broken"
-        fullWidth
-        required
-        multiline
-        minRows={4}
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        sx={{ mb: 2 }}
-      />
-      <AttachmentPicker
-        files={files}
-        onFilesChange={setFiles}
-        helperText="Add screenshots, PDFs, or other files (server limit applies). Use Camera on mobile when supported."
-      />
-      <TextField label="Category" fullWidth value={category} onChange={(e) => setCategory(e.target.value)} sx={{ mb: 2 }} />
-      <TextField
-        label="Subcategory"
-        fullWidth
-        value={subcategory}
-        onChange={(e) => setSubcategory(e.target.value)}
-        sx={{ mb: 2 }}
-      />
-      <FormControl fullWidth sx={{ mb: 2 }}>
-        <InputLabel>Impact</InputLabel>
-        <Select label="Impact" value={impact} onChange={(e) => setImpact(e.target.value as (typeof impacts)[number])}>
-          {impacts.map((i) => (
-            <MenuItem key={i} value={i}>
-              {i}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-      <FormControl fullWidth sx={{ mb: 2 }}>
-        <InputLabel>Urgency</InputLabel>
-        <Select label="Urgency" value={urgency} onChange={(e) => setUrgency(e.target.value as (typeof urgencies)[number])}>
-          {urgencies.map((u) => (
-            <MenuItem key={u} value={u}>
-              {u}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-      <Button type="submit" variant="contained">
-        Submit incident
-      </Button>
-    </Box>
+    <>
+      <div className="page-header mb-4">
+        <h2 className="page-title">Report an Incident</h2>
+      </div>
+      {error && <div className="alert alert-danger">{error}</div>}
+      <form onSubmit={submit} className="row g-3" style={{ maxWidth: 720 }}>
+        <div className="col-12">
+          <label className="form-label required">Title</label>
+          <input type="text" className="form-control" value={title} onChange={(e) => setTitle(e.target.value)} required />
+        </div>
+        <div className="col-12">
+          <div className="d-flex align-items-center gap-2 mb-1">
+            <label className="form-label mb-0">Description</label>
+            <VoiceToTextButton onAppend={(t) => setDescription((prev) => `${prev}${t}`)} />
+          </div>
+          <textarea
+            className="form-control"
+            rows={4}
+            placeholder="Describe what is broken"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            required
+          />
+        </div>
+        <div className="col-12">
+          <AttachmentPicker
+            files={files}
+            onFilesChange={setFiles}
+            helperText="Add screenshots, PDFs, or other files. Use Camera on mobile when supported."
+          />
+        </div>
+        <div className="col-md-6">
+          <label className="form-label">Category</label>
+          <input type="text" className="form-control" value={category} onChange={(e) => setCategory(e.target.value)} />
+        </div>
+        <div className="col-md-6">
+          <label className="form-label">Subcategory</label>
+          <input type="text" className="form-control" value={subcategory} onChange={(e) => setSubcategory(e.target.value)} />
+        </div>
+        <div className="col-md-6">
+          <label className="form-label">Impact</label>
+          <select className="form-select" value={impact} onChange={(e) => setImpact(e.target.value as (typeof impacts)[number])}>
+            {impacts.map((i) => (
+              <option key={i} value={i}>
+                {i}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="col-md-6">
+          <label className="form-label">Urgency</label>
+          <select className="form-select" value={urgency} onChange={(e) => setUrgency(e.target.value as (typeof urgencies)[number])}>
+            {urgencies.map((u) => (
+              <option key={u} value={u}>
+                {u}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="col-12">
+          <button type="submit" className="btn btn-primary">
+            Submit incident
+          </button>
+        </div>
+      </form>
+    </>
   );
 }

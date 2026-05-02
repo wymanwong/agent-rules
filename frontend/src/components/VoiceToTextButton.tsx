@@ -1,6 +1,4 @@
-import MicIcon from '@mui/icons-material/Mic';
-import StopIcon from '@mui/icons-material/Stop';
-import { Button, Tooltip } from '@mui/material';
+import { IconMicrophone, IconPlayerStop } from '@tabler/icons-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 type RecognitionCtor = new () => SpeechRecognition;
@@ -13,12 +11,10 @@ declare global {
 }
 
 interface Props {
-  /** Called with each finalized phrase segment (append to your field). */
   onAppend: (text: string) => void;
   disabled?: boolean;
 }
 
-/** Uses browser Web Speech API (Chrome/Edge/Safari often supported). Requires HTTPS except localhost. */
 export function VoiceToTextButton({ onAppend, disabled }: Props) {
   const [listening, setListening] = useState(false);
   const [unsupported, setUnsupported] = useState(false);
@@ -83,28 +79,24 @@ export function VoiceToTextButton({ onAppend, disabled }: Props) {
 
   if (unsupported) {
     return (
-      <Tooltip title="Voice input is not supported in this browser">
-        <span>
-          <Button size="small" disabled variant="outlined">
-            Voice
-          </Button>
-        </span>
-      </Tooltip>
+      <span className="d-inline-block" title="Voice input not supported in this browser">
+        <button type="button" className="btn btn-outline-secondary btn-sm" disabled>
+          Voice
+        </button>
+      </span>
     );
   }
 
   return (
-    <Tooltip title={listening ? 'Stop recording' : 'Speak to append text (browser speech recognition)'}>
-      <Button
-        size="small"
-        variant={listening ? 'contained' : 'outlined'}
-        color={listening ? 'secondary' : 'primary'}
-        startIcon={listening ? <StopIcon /> : <MicIcon />}
-        onClick={toggle}
-        disabled={disabled}
-      >
-        {listening ? 'Stop' : 'Voice'}
-      </Button>
-    </Tooltip>
+    <button
+      type="button"
+      className={`btn btn-sm ${listening ? 'btn-secondary' : 'btn-outline-primary'}`}
+      onClick={toggle}
+      disabled={disabled}
+      title={listening ? 'Stop recording' : 'Speak to append text'}
+    >
+      {listening ? <IconPlayerStop size={18} className="me-1" /> : <IconMicrophone size={18} className="me-1" />}
+      {listening ? 'Stop' : 'Voice'}
+    </button>
   );
 }
