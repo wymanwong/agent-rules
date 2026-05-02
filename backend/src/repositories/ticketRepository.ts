@@ -36,6 +36,7 @@ export interface TicketFilters {
   assigneeId?: number;
   requesterId?: number;
   category?: string;
+  subcategory?: string;
   createdFrom?: string;
   createdTo?: string;
   search?: string;
@@ -163,6 +164,7 @@ export function listTickets(
   if (filters.assigneeId !== undefined) add('assignee_id = ?', filters.assigneeId);
   if (filters.requesterId !== undefined) add('requester_id = ?', filters.requesterId);
   if (filters.category) add('category = ?', filters.category);
+  if (filters.subcategory) add('subcategory = ?', filters.subcategory);
   if (filters.createdFrom) add('created_at >= ?', filters.createdFrom);
   if (filters.createdTo) add('created_at <= ?', filters.createdTo);
   if (filters.search) {

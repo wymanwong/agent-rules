@@ -153,6 +153,7 @@ export function createTicketController(db: Database) {
         assigneeId: q.assigneeId !== undefined ? Number(q.assigneeId) : undefined,
         requesterId: q.requesterId !== undefined ? Number(q.requesterId) : undefined,
         category: q.category as string | undefined,
+        subcategory: q.subcategory as string | undefined,
         createdFrom: q.createdFrom as string | undefined,
         createdTo: q.createdTo as string | undefined,
         search: q.search as string | undefined,

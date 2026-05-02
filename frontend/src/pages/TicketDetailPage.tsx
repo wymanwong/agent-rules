@@ -32,6 +32,7 @@ interface Ticket {
   impact: string;
   urgency: string;
   category: string | null;
+  subcategory: string | null;
   due_at: string | null;
   created_at: string;
   requester_id: number;
@@ -436,12 +437,12 @@ export function TicketDetailPage() {
                     <dd className="col-sm-8 col-lg-9 mb-0 fw-medium">{new Date(ticket.due_at).toLocaleString()}</dd>
                   </>
                 )}
-                {ticket.category && (
+                {(ticket.category || ticket.subcategory) && (
                   <>
-                    <dt className="col-sm-4 col-lg-3 text-secondary">Category</dt>
-                    <dd className="col-sm-8 col-lg-9 mb-0 d-flex align-items-center gap-1">
+                    <dt className="col-sm-4 col-lg-3 text-secondary">Classification</dt>
+                    <dd className="col-sm-8 col-lg-9 mb-0 d-flex align-items-center gap-1 flex-wrap">
                       <IconCategory size={16} className="icon text-secondary" aria-hidden />
-                      {ticket.category}
+                      {[ticket.category, ticket.subcategory].filter(Boolean).join(' · ') || '—'}
                     </dd>
                   </>
                 )}

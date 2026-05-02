@@ -2,6 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IconFilter } from '@tabler/icons-react';
 import { api } from '../api';
+import {
+  INCIDENT_CATEGORY_LABELS,
+  INCIDENT_SUBCATEGORIES,
+  type IncidentCategory,
+} from '../constants/incidentTaxonomy';
 
 const SEARCH_DEBOUNCE_MS = 400;
 
@@ -13,6 +18,7 @@ interface TicketRow {
   status: string;
   priority: string;
   category: string | null;
+  subcategory: string | null;
   created_at: string;
 }
 
@@ -21,7 +27,8 @@ export function MyRequestsPage() {
   const [tickets, setTickets] = useState<TicketRow[]>([]);
   const [type, setType] = useState('');
   const [status, setStatus] = useState('');
-  const [category, setCategory] = useState('');
+  const [category, setCategory] = useState<IncidentCategory | ''>('');
+  const [subcategory, setSubcategory] = useState('');
   const [createdFrom, setCreatedFrom] = useState('');
   const [createdTo, setCreatedTo] = useState('');
   const [search, setSearch] = useState('');
@@ -38,13 +45,20 @@ export function MyRequestsPage() {
     if (type) params.set('type', type);
     if (status) params.set('status', status);
     if (category) params.set('category', category);
+    if (subcategory) params.set('subcategory', subcategory);
     if (createdFrom) params.set('createdFrom', new Date(createdFrom).toISOString());
     if (createdTo) params.set('createdTo', new Date(createdTo).toISOString());
     if (searchQuery) params.set('search', searchQuery);
     params.set('limit', '100');
     const res = await api<{ tickets: TicketRow[] }>(`/tickets?${params.toString()}`);
     setTickets(res.tickets);
-  }, [type, status, category, createdFrom, createdTo, searchQuery]);
+  }, [type, status, category, subcategory, createdFrom, createdTo, searchQuery]);
+
+  const subcategoryFilterOptions = category ? [...INCIDENT_SUBCATEGORIES[category]] : [];
+
+  useEffect(() => {
+    setSubcategory('');
+  }, [category]);
 
   useEffect(() => {
     void load().catch(() => {
@@ -86,14 +100,31 @@ export function MyRequestsPage() {
               />
             </div>
             <div className="col-12 col-sm-6 col-md-4 col-lg-2">
-              <label className="form-label mb-1 small text-secondary">Category</label>
-              <input
-                type="text"
-                className="form-control form-control-sm"
-                placeholder="Category"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-              />
+              <label className="form-label mb-1 small text-secondary">Incident category</label>
+              <select className="form-select form-select-sm" value={category} onChange={(e) => setCategory(e.target.value as IncidentCategory | '')}>
+                <option value="">Any</option>
+                {INCIDENT_CATEGORY_LABELS.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="col-12 col-sm-6 col-md-4 col-lg-2">
+              <label className="form-label mb-1 small text-secondary">Incident subcategory</label>
+              <select
+                className="form-select form-select-sm"
+                value={subcategory}
+                onChange={(e) => setSubcategory(e.target.value)}
+                disabled={!category}
+              >
+                <option value="">Any</option>
+                {subcategoryFilterOptions.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="col-6 col-md-4 col-lg-2">
               <label className="form-label mb-1 small text-secondary">From</label>
@@ -126,6 +157,8 @@ export function MyRequestsPage() {
                   <th>Number</th>
                   <th>Title</th>
                   <th>Type</th>
+                  <th>Category</th>
+                  <th>Subcategory</th>
                   <th>Status</th>
                   <th>Priority</th>
                   <th>Created</th>
@@ -134,7 +167,7 @@ export function MyRequestsPage() {
               <tbody>
                 {tickets.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-secondary text-center py-4">
+                    <td colSpan={8} className="text-secondary text-center py-4">
                       No tickets match these filters.
                     </td>
                   </tr>
@@ -144,6 +177,8 @@ export function MyRequestsPage() {
                       <td className="text-secondary">{t.ticket_number}</td>
                       <td className="fw-medium">{t.title}</td>
                       <td>{t.type}</td>
+                      <td className="text-secondary small">{t.category ?? '—'}</td>
+                      <td className="text-secondary small">{t.subcategory ?? '—'}</td>
                       <td>{t.status}</td>
                       <td>{t.priority}</td>
                       <td className="text-secondary text-nowrap">{new Date(t.created_at).toLocaleString()}</td>
