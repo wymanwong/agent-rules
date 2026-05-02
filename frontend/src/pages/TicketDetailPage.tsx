@@ -396,13 +396,77 @@ export function TicketDetailPage() {
       {error && <div className="alert alert-danger">{error}</div>}
 
       <div className="row g-4">
-        <div className="col-lg-8">
+        <div className="col-12">
           <div className="card mb-4">
             <div className="card-header">
               <h2 className="card-title mb-0">Description</h2>
             </div>
             <div className="card-body">
               <div className="ticket-description-body text-body">{ticket.description || '—'}</div>
+            </div>
+          </div>
+
+          <div className="card mb-4">
+            <div className="card-header">
+              <h2 className="card-title mb-0">Details</h2>
+            </div>
+            <div className="card-body">
+              <dl className="row mb-0 gy-2 small">
+                <dt className="col-sm-4 col-lg-3 text-secondary">Opened</dt>
+                <dd className="col-sm-8 col-lg-9 mb-0 d-flex align-items-start gap-1">
+                  <IconCalendar size={16} className="icon text-secondary flex-shrink-0 mt-1" aria-hidden />
+                  <span>{new Date(ticket.created_at).toLocaleString()}</span>
+                </dd>
+                {ticket.due_at && (
+                  <>
+                    <dt className="col-sm-4 col-lg-3 text-secondary">SLA due</dt>
+                    <dd className="col-sm-8 col-lg-9 mb-0 fw-medium">{new Date(ticket.due_at).toLocaleString()}</dd>
+                  </>
+                )}
+                {ticket.category && (
+                  <>
+                    <dt className="col-sm-4 col-lg-3 text-secondary">Category</dt>
+                    <dd className="col-sm-8 col-lg-9 mb-0 d-flex align-items-center gap-1">
+                      <IconCategory size={16} className="icon text-secondary" aria-hidden />
+                      {ticket.category}
+                    </dd>
+                  </>
+                )}
+                <dt className="col-sm-4 col-lg-3 text-secondary">Requester</dt>
+                <dd className="col-sm-8 col-lg-9 mb-0 d-flex align-items-center gap-1">
+                  <IconUser size={16} className="icon text-secondary" aria-hidden />
+                  {data.requester ? (
+                    <>
+                      {data.requester.name}
+                      <span className="text-secondary">· #{ticket.requester_id}</span>
+                    </>
+                  ) : (
+                    <>#{ticket.requester_id}</>
+                  )}
+                </dd>
+                <dt className="col-sm-4 col-lg-3 text-secondary">Assignee</dt>
+                <dd className="col-sm-8 col-lg-9 mb-0">
+                  {data.assignee ? (
+                    <span className="d-flex align-items-center gap-1">
+                      <IconUser size={16} className="icon text-secondary" aria-hidden />
+                      {data.assignee.name}
+                    </span>
+                  ) : (
+                    <span className="text-secondary">Unassigned</span>
+                  )}
+                </dd>
+                <dt className="col-sm-4 col-lg-3 text-secondary">Team</dt>
+                <dd className="col-sm-8 col-lg-9 mb-0 d-flex align-items-center gap-1">
+                  <IconUsersGroup size={16} className="icon text-secondary" aria-hidden />
+                  {data.team?.name ?? '—'}
+                </dd>
+                {ticket.type === 'ServiceRequest' && data.catalog_item?.id != null && (
+                  <>
+                    <dt className="col-sm-4 col-lg-3 text-secondary">Catalog</dt>
+                    <dd className="col-sm-8 col-lg-9 mb-0">{data.catalog_item.name ?? `Item #${data.catalog_item.id}`}</dd>
+                  </>
+                )}
+              </dl>
             </div>
           </div>
 
@@ -582,72 +646,6 @@ export function TicketDetailPage() {
               </form>
             </div>
           </div>
-        </div>
-
-        <div className="col-lg-4">
-          <div className="card mb-4">
-            <div className="card-header">
-              <h2 className="card-title mb-0">Details</h2>
-            </div>
-            <div className="card-body">
-              <dl className="row mb-0 gy-2 small">
-                <dt className="col-5 text-secondary">Opened</dt>
-                <dd className="col-7 mb-0 d-flex align-items-start gap-1">
-                  <IconCalendar size={16} className="icon text-secondary flex-shrink-0 mt-1" aria-hidden />
-                  <span>{new Date(ticket.created_at).toLocaleString()}</span>
-                </dd>
-                {ticket.due_at && (
-                  <>
-                    <dt className="col-5 text-secondary">SLA due</dt>
-                    <dd className="col-7 mb-0 fw-medium">{new Date(ticket.due_at).toLocaleString()}</dd>
-                  </>
-                )}
-                {ticket.category && (
-                  <>
-                    <dt className="col-5 text-secondary">Category</dt>
-                    <dd className="col-7 mb-0 d-flex align-items-center gap-1">
-                      <IconCategory size={16} className="icon text-secondary" aria-hidden />
-                      {ticket.category}
-                    </dd>
-                  </>
-                )}
-                <dt className="col-5 text-secondary">Requester</dt>
-                <dd className="col-7 mb-0 d-flex align-items-center gap-1">
-                  <IconUser size={16} className="icon text-secondary" aria-hidden />
-                  {data.requester ? (
-                    <>
-                      {data.requester.name}
-                      <span className="text-secondary">· #{ticket.requester_id}</span>
-                    </>
-                  ) : (
-                    <>#{ticket.requester_id}</>
-                  )}
-                </dd>
-                <dt className="col-5 text-secondary">Assignee</dt>
-                <dd className="col-7 mb-0">
-                  {data.assignee ? (
-                    <span className="d-flex align-items-center gap-1">
-                      <IconUser size={16} className="icon text-secondary" aria-hidden />
-                      {data.assignee.name}
-                    </span>
-                  ) : (
-                    <span className="text-secondary">Unassigned</span>
-                  )}
-                </dd>
-                <dt className="col-5 text-secondary">Team</dt>
-                <dd className="col-7 mb-0 d-flex align-items-center gap-1">
-                  <IconUsersGroup size={16} className="icon text-secondary" aria-hidden />
-                  {data.team?.name ?? '—'}
-                </dd>
-                {ticket.type === 'ServiceRequest' && data.catalog_item?.id != null && (
-                  <>
-                    <dt className="col-5 text-secondary">Catalog</dt>
-                    <dd className="col-7 mb-0">{data.catalog_item.name ?? `Item #${data.catalog_item.id}`}</dd>
-                  </>
-                )}
-              </dl>
-            </div>
-          </div>
 
           {showInternal && (
             <div className="card mb-4">
@@ -710,7 +708,7 @@ export function TicketDetailPage() {
             </div>
           )}
 
-          <div className="d-grid d-md-none">
+          <div className="d-grid d-md-none mb-4">
             <button type="button" className="btn btn-outline-secondary" onClick={() => void refresh()}>
               <IconRefresh size={18} className="icon" aria-hidden />
               <span className="ms-1">Refresh</span>
