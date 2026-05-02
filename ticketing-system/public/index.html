@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IT Helpdesk</title>
+  <!-- Inline fallback so UI is readable even if styles.css fails to load -->
+  <style>
+    html, body { margin: 0; min-height: 100vh; background: #0f1419; color: #e7ecf3; font-family: system-ui, Segoe UI, sans-serif; }
+    #app { min-height: 40vh; }
+    .boot-hint { padding: 1rem 1.25rem; max-width: 42rem; margin: 0 auto; line-height: 1.5; }
+    .boot-hint code { background: #1a2332; padding: 0.15rem 0.35rem; border-radius: 4px; }
+    #boot-error { color: #f87171; white-space: pre-wrap; }
+  </style>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <noscript>
+    <div class="boot-hint">
+      <p><strong>JavaScript is required.</strong> Enable scripts and reload.</p>
+      <p>Open this page from the running server (not as a file): <code>http://localhost:3840/</code></p>
+    </div>
+  </noscript>
+  <div id="boot-static" class="boot-hint">
+    <p><strong>IT Helpdesk</strong> — loading interface…</p>
+    <p><strong>Same PC:</strong> <code>http://localhost:&lt;PORT&gt;/</code> (default PORT from terminal when you run <code>npm start</code>).</p>
+    <p><strong>Phone or another computer:</strong> use <strong>this machine’s LAN IP</strong>, e.g. <code>http://192.168.x.x:&lt;PORT&gt;/</code>. Do <em>not</em> use <code>localhost</code> there — localhost always means “this phone/PC”, not your server PC.</p>
+    <p>If this message stays forever: F12 → Console. If the page is <em>white</em>, you are probably not hitting this server.</p>
+    <p id="boot-error" aria-live="polite"></p>
+  </div>
+  <div id="app"></div>
+  <script nomodule>
+    document.getElementById("boot-error").textContent =
+      "This browser does not support JavaScript modules (ES modules). Use a current Chrome, Edge, Firefox, or Safari.";
+  </script>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
