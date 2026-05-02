@@ -112,6 +112,11 @@ function ticketListBackPath(role?: string): string {
   return '/';
 }
 
+/** Display PascalCase workflow labels with spaces (e.g. InProgress → In Progress). */
+function spacedLabel(value: string): string {
+  return value.replace(/([A-Z])/g, ' $1').trim();
+}
+
 export function TicketDetailPage() {
   const { id } = useParams();
   const { user } = useAuth();
@@ -370,7 +375,7 @@ export function TicketDetailPage() {
             </h1>
             <div className="d-flex flex-wrap align-items-center gap-2">
               <span className="badge bg-secondary-lt text-secondary-fg">{typeLabel}</span>
-              <span className={statusBadgeClass(ticket.status)}>{ticket.status.replace(/([A-Z])/g, ' $1').trim()}</span>
+              <span className={statusBadgeClass(ticket.status)}>{spacedLabel(ticket.status)}</span>
               <span className={priorityBadgeClass(ticket.priority)}>{ticket.priority}</span>
               <span className="text-secondary small d-flex align-items-center gap-1">
                 <IconChartDots size={16} stroke={1.5} aria-hidden />
@@ -663,7 +668,7 @@ export function TicketDetailPage() {
                 >
                   {statuses.map((s) => (
                     <option key={s} value={s}>
-                      {s.replace(/([A-Z])/g, ' $1').trim()}
+                      {spacedLabel(s)}
                     </option>
                   ))}
                 </select>
