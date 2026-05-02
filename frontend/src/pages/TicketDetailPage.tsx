@@ -75,28 +75,29 @@ interface AttachmentMeta {
 const incidentStatuses = ['New', 'InTriage', 'InProgress', 'PendingUser', 'Pending3rdParty', 'Resolved', 'Closed'];
 const srStatuses = ['New', 'AwaitingApproval', 'Approved', 'InProgress', 'Completed', 'Closed'];
 
+/** Solid Tabler `text-bg-*` pairs — avoids unreadable lt+tint combos under `.badge`. */
 function priorityBadgeClass(priority: string): string {
   switch (priority) {
     case 'P1':
-      return 'badge bg-danger-lt text-danger-fg';
+      return 'badge text-bg-danger';
     case 'P2':
-      return 'badge bg-orange-lt text-orange-fg';
+      return 'badge text-bg-orange';
     case 'P3':
-      return 'badge bg-azure-lt text-azure-fg';
+      return 'badge text-bg-azure';
     case 'P4':
-      return 'badge bg-secondary-lt text-secondary-fg';
+      return 'badge text-bg-secondary';
     default:
-      return 'badge bg-secondary-lt text-secondary-fg';
+      return 'badge text-bg-secondary';
   }
 }
 
 function statusBadgeClass(status: string): string {
   const s = status.toLowerCase();
-  let cls = 'badge bg-primary-lt text-primary-fg';
-  if (s === 'closed' || s === 'resolved' || s === 'completed') cls = 'badge bg-success-lt text-success-fg';
-  else if (s.startsWith('pending')) cls = 'badge bg-warning-lt text-warning-fg';
-  else if (s === 'new' || s === 'awaitingapproval') cls = 'badge bg-azure-lt text-azure-fg';
-  else if (s === 'approved') cls = 'badge bg-teal-lt text-teal-fg';
+  let cls = 'badge text-bg-primary';
+  if (s === 'closed' || s === 'resolved' || s === 'completed') cls = 'badge text-bg-success';
+  else if (s.startsWith('pending')) cls = 'badge text-bg-warning';
+  else if (s === 'new' || s === 'awaitingapproval') cls = 'badge text-bg-azure';
+  else if (s === 'approved') cls = 'badge text-bg-teal';
   return cls;
 }
 
@@ -374,7 +375,7 @@ export function TicketDetailPage() {
               <span className="d-inline-block">{ticket.title}</span>
             </h1>
             <div className="d-flex flex-wrap align-items-center gap-2">
-              <span className="badge bg-secondary-lt text-secondary-fg">{typeLabel}</span>
+              <span className="badge text-bg-secondary">{typeLabel}</span>
               <span className={statusBadgeClass(ticket.status)}>{spacedLabel(ticket.status)}</span>
               <span className={priorityBadgeClass(ticket.priority)}>{ticket.priority}</span>
               <span className="text-secondary small d-flex align-items-center gap-1">
@@ -410,7 +411,7 @@ export function TicketDetailPage() {
               <h2 className="card-title mb-0 d-flex align-items-center gap-2">
                 <IconPaperclip size={20} stroke={1.5} aria-hidden />
                 Attachments
-                <span className="badge bg-secondary-lt text-secondary-fg ms-1">{attachments.length}</span>
+                <span className="badge text-bg-secondary ms-1">{attachments.length}</span>
               </h2>
             </div>
             <div className="card-body">
@@ -513,7 +514,7 @@ export function TicketDetailPage() {
               <h2 className="card-title mb-0 d-flex align-items-center gap-2">
                 <IconMessageCircle size={20} stroke={1.5} aria-hidden />
                 Activity
-                <span className="badge bg-secondary-lt text-secondary-fg ms-1">{comments.length}</span>
+                <span className="badge text-bg-secondary ms-1">{comments.length}</span>
               </h2>
             </div>
             <div className="card-body">
@@ -526,7 +527,7 @@ export function TicketDetailPage() {
                       <div className="d-flex flex-wrap align-items-baseline gap-2 mb-1">
                         <span className="fw-medium">User #{c.author_id}</span>
                         <span className="text-secondary small">{new Date(c.created_at).toLocaleString()}</span>
-                        {c.is_internal === 1 && <span className="badge bg-warning-lt text-warning-fg">Internal</span>}
+                        {c.is_internal === 1 && <span className="badge text-bg-warning">Internal</span>}
                       </div>
                       <div className="text-body" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                         {c.body}
