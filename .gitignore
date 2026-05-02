@@ -1,2 +1,7 @@
 # macOS
 .DS_Store
+
+# IT ticketing app
+ticketing-system/node_modules/
+ticketing-system/data/*.db
+ticketing-system/data/*.db-*

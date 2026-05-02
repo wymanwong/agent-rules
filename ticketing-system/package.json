@@ -1,0 +1,20 @@
+{
+  "name": "it-ticketing-system",
+  "version": "1.0.0",
+  "description": "IT helpdesk with SQLite, ticket split/migrate, customizable forms, self-service",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.6.0",
+    "express": "^4.21.1",
+    "express-session": "^1.18.1"
+  }
+}
