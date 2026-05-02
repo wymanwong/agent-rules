@@ -361,7 +361,7 @@ export function TicketDetailPage() {
         onClose={closePreview}
       />
 
-      <div className="page-header d-print-none">
+      <div className="page-header d-print-none mb-4 pb-2 pb-lg-3">
         <div className="row align-items-center">
           <div className="col">
             <div className="text-secondary small mb-1">
