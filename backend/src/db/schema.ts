@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS tickets (
   source TEXT NOT NULL,
   channel TEXT,
   ticket_extra_json TEXT,
+  catalog_item_id INTEGER REFERENCES service_catalog_items(id),
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   due_at TEXT

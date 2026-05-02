@@ -37,6 +37,7 @@ interface Ticket {
   due_at: string | null;
   created_at: string;
   requester_id: number;
+  catalog_item_id: number | null;
 }
 
 interface Comment {
@@ -81,6 +82,7 @@ export function TicketDetailPage() {
   const navigate = useNavigate();
   const [data, setData] = useState<{
     ticket: Ticket;
+    catalog_item?: { id: number; name: string | null } | null;
     comments: Comment[];
     approvals: Approval[];
     assignment_history: AssignmentRow[];
@@ -229,6 +231,12 @@ export function TicketDetailPage() {
       <Typography color="text.secondary" gutterBottom>
         {ticket.type} · {ticket.status} · {ticket.priority} · Impact {ticket.impact} / Urgency {ticket.urgency}
       </Typography>
+      {ticket.type === 'ServiceRequest' && data.catalog_item?.id != null && (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          Catalog offering: <strong>{data.catalog_item.name ?? `Item #${data.catalog_item.id}`}</strong> (catalog ID{' '}
+          {data.catalog_item.id})
+        </Typography>
+      )}
       {ticket.due_at && (
         <Typography variant="body2">
           SLA due: {new Date(ticket.due_at).toLocaleString()}

@@ -53,6 +53,8 @@ export function createTicket(
     team_id?: number | null;
     assignee_id?: number | null;
     ticket_extra_json?: string | null;
+    /** Links Service Request to `service_catalog_items` when raised from catalog */
+    catalog_item_id?: number | null;
     status?: string;
     department?: string | null;
     /** When set (e.g. catalog default), overrides impact×urgency matrix for priority and SLA */
@@ -83,6 +85,7 @@ export function createTicket(
     source: input.source,
     channel: input.channel ?? null,
     ticket_extra_json: input.ticket_extra_json ?? null,
+    catalog_item_id: input.catalog_item_id ?? null,
     created_at: now,
     updated_at: now,
     due_at: dueAt,

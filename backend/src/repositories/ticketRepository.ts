@@ -20,10 +20,13 @@ export interface TicketRow {
   source: string;
   channel: string | null;
   ticket_extra_json: string | null;
+  catalog_item_id: number | null;
   created_at: string;
   updated_at: string;
   due_at: string | null;
 }
+
+export type TicketDetailRow = TicketRow & { catalog_service_name?: string | null };
 
 export interface TicketFilters {
   type?: string;
@@ -52,11 +55,11 @@ export function insertTicket(
       `INSERT INTO tickets (
         ticket_number, title, description, type, impact, urgency, priority, status,
         category, subcategory, requester_id, team_id, assignee_id, department,
-        source, channel, ticket_extra_json, created_at, updated_at, due_at
+        source, channel, ticket_extra_json, catalog_item_id, created_at, updated_at, due_at
       ) VALUES (
         @ticket_number, @title, @description, @type, @impact, @urgency, @priority, @status,
         @category, @subcategory, @requester_id, @team_id, @assignee_id, @department,
-        @source, @channel, @ticket_extra_json, @created_at, @updated_at, @due_at
+        @source, @channel, @ticket_extra_json, @catalog_item_id, @created_at, @updated_at, @due_at
       )`,
     )
     .run({
@@ -77,6 +80,7 @@ export function insertTicket(
       source: row.source,
       channel: row.channel ?? null,
       ticket_extra_json: row.ticket_extra_json ?? null,
+      catalog_item_id: row.catalog_item_id ?? null,
       created_at: row.created_at,
       updated_at: row.updated_at,
       due_at: row.due_at ?? null,
@@ -117,6 +121,18 @@ export function patchTicket(
 
 export function getTicketById(db: Database, id: number): TicketRow | undefined {
   return db.prepare('SELECT * FROM tickets WHERE id = ?').get(id) as TicketRow | undefined;
+}
+
+/** Ticket row plus catalog offering name when linked via catalog_item_id */
+export function getTicketByIdWithCatalog(db: Database, id: number): TicketDetailRow | undefined {
+  return db
+    .prepare(
+      `SELECT t.*, sci.name AS catalog_service_name
+       FROM tickets t
+       LEFT JOIN service_catalog_items sci ON sci.id = t.catalog_item_id
+       WHERE t.id = ?`,
+    )
+    .get(id) as TicketDetailRow | undefined;
 }
 
 export function listTickets(

@@ -165,9 +165,11 @@ export function createTicketController(db: Database) {
     getById: (req: AuthRequest, res: Response): void => {
       if (!req.user) throw new HttpError(401, 'Unauthorized');
       const id = Number(req.params.id);
-      const ticket = ticketRepo.getTicketById(db, id);
-      if (!ticket) throw new HttpError(404, 'Ticket not found');
-      if (!canAccessTicket(db, req.user, ticket)) throw new HttpError(403, 'Forbidden');
+      const ticketRow = ticketRepo.getTicketByIdWithCatalog(db, id);
+      if (!ticketRow) throw new HttpError(404, 'Ticket not found');
+      if (!canAccessTicket(db, req.user, ticketRow)) throw new HttpError(403, 'Forbidden');
+
+      const { catalog_service_name: catName, ...ticket } = ticketRow;
 
       const requester = userRepo.findUserById(db, ticket.requester_id);
       const assignee = ticket.assignee_id ? userRepo.findUserById(db, ticket.assignee_id) : undefined;
@@ -188,8 +190,14 @@ export function createTicketController(db: Database) {
         return s;
       };
 
+      const catalog_item =
+        ticket.catalog_item_id != null
+          ? { id: ticket.catalog_item_id, name: catName ?? null }
+          : null;
+
       res.json({
         ticket,
+        catalog_item,
         requester: strip(requester),
         assignee: strip(assignee),
         team,
