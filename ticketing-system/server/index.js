@@ -5,6 +5,7 @@ const db = openDb();
 const app = createApp(db);
 
 const port = Number(process.env.PORT) || 3840;
-app.listen(port, () => {
-  console.log(`IT Ticketing API at http://localhost:${port}/api/v1`);
+const host = process.env.HOST || "0.0.0.0";
+app.listen(port, host, () => {
+  console.log(`IT Helpdesk UI + API → http://${host === "0.0.0.0" ? "localhost" : host}:${port}/   (API /api/v1)`);
 });

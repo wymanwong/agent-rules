@@ -4,15 +4,29 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>IT Helpdesk</title>
+  <!-- Inline fallback so UI is readable even if styles.css fails to load -->
+  <style>
+    html, body { margin: 0; min-height: 100vh; background: #0f1419; color: #e7ecf3; font-family: system-ui, Segoe UI, sans-serif; }
+    #app { min-height: 40vh; }
+    .boot-hint { padding: 1rem 1.25rem; max-width: 42rem; margin: 0 auto; line-height: 1.5; }
+    .boot-hint code { background: #1a2332; padding: 0.15rem 0.35rem; border-radius: 4px; }
+    #boot-error { color: #f87171; white-space: pre-wrap; }
+  </style>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
   <noscript>
-    <p style="padding:1rem;font-family:system-ui">JavaScript is required for IT Helpdesk. Enable scripts and reload.</p>
+    <div class="boot-hint">
+      <p><strong>JavaScript is required.</strong> Enable scripts and reload.</p>
+      <p>Open this page from the running server (not as a file): <code>http://localhost:3840/</code></p>
+    </div>
   </noscript>
-  <div id="app">
-    <p style="padding:1rem;font-family:system-ui;color:#e7ecf3;background:#0f1419;margin:0">Loading…</p>
+  <div id="boot-static" class="boot-hint">
+    <p><strong>IT Helpdesk</strong> — loading interface…</p>
+    <p>If this message stays forever: open DevTools (F12) → Console for errors. Use URL <code>http://localhost:3840/</code> (same machine as <code>npm start</code>).</p>
+    <p id="boot-error" aria-live="polite"></p>
   </div>
+  <div id="app"></div>
   <script type="module" src="/app.js"></script>
 </body>
 </html>

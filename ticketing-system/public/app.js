@@ -1,7 +1,44 @@
 const BASE = "/api/v1";
 
-let accessToken = localStorage.getItem("accessToken") || "";
-let refreshToken = localStorage.getItem("refreshToken") || "";
+function lsGet(key) {
+  try {
+    return localStorage.getItem(key) || "";
+  } catch {
+    return "";
+  }
+}
+function lsSet(key, val) {
+  try {
+    localStorage.setItem(key, val);
+  } catch {
+    /* private mode / blocked storage */
+  }
+}
+function lsRemove(key) {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    /* ignore */
+  }
+}
+
+let accessToken = lsGet("accessToken");
+let refreshToken = lsGet("refreshToken");
+
+function hideBootStatic() {
+  const b = document.getElementById("boot-static");
+  if (b) b.hidden = true;
+}
+
+window.addEventListener("error", (e) => {
+  const el = document.getElementById("boot-error");
+  if (el && !el.textContent) el.textContent = e.message || String(e.error || "");
+});
+
+window.addEventListener("unhandledrejection", (e) => {
+  const el = document.getElementById("boot-error");
+  if (el && !el.textContent) el.textContent = e.reason?.message || String(e.reason || "");
+});
 
 async function api(path, opts = {}) {
   const headers = { "Content-Type": "application/json", ...opts.headers };
@@ -19,8 +56,8 @@ async function api(path, opts = {}) {
       if (j.success && j.data?.accessToken) {
         accessToken = j.data.accessToken;
         refreshToken = j.data.refreshToken || refreshToken;
-        localStorage.setItem("accessToken", accessToken);
-        localStorage.setItem("refreshToken", refreshToken);
+        lsSet("accessToken", accessToken);
+        lsSet("refreshToken", refreshToken);
         return api(path, { ...opts, _retry: true });
       }
     } catch {
@@ -28,8 +65,8 @@ async function api(path, opts = {}) {
     }
     accessToken = "";
     refreshToken = "";
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
+    lsRemove("accessToken");
+    lsRemove("refreshToken");
   }
 
   const text = await r.text();
@@ -87,8 +124,8 @@ async function bootstrapUser() {
     state.user = null;
     accessToken = "";
     refreshToken = "";
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
+    lsRemove("accessToken");
+    lsRemove("refreshToken");
   }
 }
 
@@ -117,6 +154,8 @@ async function loadDetail(id) {
 function render() {
   const app = document.getElementById("app");
   if (!app) return;
+
+  hideBootStatic();
 
   if (state.error && !state.user) {
     app.innerHTML = "";
@@ -169,8 +208,8 @@ function render() {
     }
     accessToken = "";
     refreshToken = "";
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
+    lsRemove("accessToken");
+    lsRemove("refreshToken");
     state.user = null;
     state.view = "login";
     render();
@@ -255,8 +294,8 @@ function loginView() {
       if (!data.success) throw new Error(data.error?.message || "Login failed");
       accessToken = data.data.accessToken;
       refreshToken = data.data.refreshToken;
-      localStorage.setItem("accessToken", accessToken);
-      localStorage.setItem("refreshToken", refreshToken);
+      lsSet("accessToken", accessToken);
+      lsSet("refreshToken", refreshToken);
       state.user = data.data.user;
       state.view = state.user.role === "end_user" ? "portal" : "tickets";
       await refreshViewData();
@@ -281,8 +320,8 @@ function loginView() {
       if (!data.success) throw new Error(data.error?.message || "Register failed");
       accessToken = data.data.accessToken;
       refreshToken = data.data.refreshToken;
-      localStorage.setItem("accessToken", accessToken);
-      localStorage.setItem("refreshToken", refreshToken);
+      lsSet("accessToken", accessToken);
+      lsSet("refreshToken", refreshToken);
       state.user = data.data.user;
       state.view = "portal";
       await refreshViewData();
@@ -660,6 +699,7 @@ async function reportsView() {
 }
 
 async function boot() {
+  hideBootStatic();
   state.error = "";
   try {
     await bootstrapUser();
@@ -679,4 +719,8 @@ async function boot() {
   render();
 }
 
-boot();
+boot().catch((e) => {
+  const el = document.getElementById("boot-error");
+  if (el) el.textContent = e?.message || String(e);
+  console.error(e);
+});
