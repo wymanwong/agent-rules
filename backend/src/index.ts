@@ -12,11 +12,12 @@ app.use(express.json({ limit: '1mb' }));
 app.use(requestLogger);
 
 const db = getDb();
-registerRoutes(app, db);
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true });
 });
+
+registerRoutes(app, db);
 
 app.use(errorHandler);
 
