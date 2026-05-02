@@ -116,6 +116,24 @@ async function loadDetail(id) {
 
 function render() {
   const app = document.getElementById("app");
+  if (!app) return;
+
+  if (state.error && !state.user) {
+    app.innerHTML = "";
+    const wrap = el(`<div class="layout"><div class="card" style="max-width:520px;margin:2rem auto">
+      <h2>Something went wrong</h2>
+      <p class="error">${escapeHtml(state.error)}</p>
+      <p class="muted">Make sure the API is running on the same host (e.g. open <code>http://localhost:3840/</code> not a different port).</p>
+      <button class="primary" type="button" id="retryBoot">Retry</button>
+    </div></div>`);
+    wrap.querySelector("#retryBoot").onclick = () => {
+      state.error = "";
+      boot();
+    };
+    app.append(wrap);
+    return;
+  }
+
   if (!state.user) {
     app.innerHTML = "";
     app.append(loginView());
@@ -166,6 +184,11 @@ function render() {
   ];
   if (isStaff()) tabs.push({ id: "forms", label: "Form customization" });
   if (state.user.role === "admin") tabs.push({ id: "reports", label: "Reports" });
+
+  if (state.error) {
+    const warn = el(`<div class="card" style="margin-bottom:1rem;border-color:var(--warn)"><p class="error" style="margin:0">${escapeHtml(state.error)}</p></div>`);
+    layout.insertBefore(warn, layout.querySelector("nav.tabs"));
+  }
 
   const nav = document.getElementById("nav");
   for (const t of tabs) {
@@ -637,10 +660,21 @@ async function reportsView() {
 }
 
 async function boot() {
-  await bootstrapUser();
-  if (state.user) {
-    state.view = state.user.role === "end_user" ? "portal" : "tickets";
-    await refreshViewData();
+  state.error = "";
+  try {
+    await bootstrapUser();
+    if (state.user) {
+      state.view = state.user.role === "end_user" ? "portal" : "tickets";
+      try {
+        await refreshViewData();
+      } catch (e) {
+        state.error = e.message || String(e);
+        console.error(e);
+      }
+    }
+  } catch (e) {
+    state.error = e.message || String(e);
+    console.error(e);
   }
   render();
 }
