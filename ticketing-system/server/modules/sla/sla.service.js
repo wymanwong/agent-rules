@@ -1,6 +1,7 @@
-export async function pickPolicy(db, priority) {
-  const r = await db.query(`SELECT * FROM sla_policies WHERE priority = ? LIMIT 1`, [priority]);
-  return r.rows[0] ?? null;
+/** Apply default SLA policy for ticket priority (SQLite dev — wall-clock minutes). */
+
+export function pickPolicy(db, priority) {
+  return db.prepare(`SELECT * FROM sla_policies WHERE priority = ? LIMIT 1`).get(priority);
 }
 
 export function computeDueDates(policy, now = new Date()) {
@@ -10,14 +11,13 @@ export function computeDueDates(policy, now = new Date()) {
   return { sla_response_due_at: resp, sla_resolution_due_at: res };
 }
 
-export async function applySlaToTicket(db, ticketId, priority) {
-  const policy = await pickPolicy(db, priority);
+export function applySlaToTicket(db, ticketId, priority) {
+  const policy = pickPolicy(db, priority);
   if (!policy) return;
   const due = computeDueDates(policy);
-  await db.query(
+  db.prepare(
     `UPDATE tickets SET sla_policy_id = ?, sla_response_due_at = ?, sla_resolution_due_at = ?,
-     sla_response_breached = FALSE, sla_resolution_breached = FALSE, updated_at = NOW()
-     WHERE id = ?`,
-    [policy.id, due.sla_response_due_at, due.sla_resolution_due_at, ticketId]
-  );
+     sla_response_breached = 0, sla_resolution_breached = 0, updated_at = datetime('now')
+     WHERE id = ?`
+  ).run(policy.id, due.sla_response_due_at, due.sla_resolution_due_at, ticketId);
 }
