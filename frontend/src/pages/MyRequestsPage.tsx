@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { IconFilter } from '@tabler/icons-react';
 import { api } from '../api';
 
 interface TicketRow {
@@ -42,63 +43,112 @@ export function MyRequestsPage() {
   }, []);
 
   return (
-    <>
-      <div className="page-header mb-4">
-        <h2 className="page-title">My Requests</h2>
+    <div className="my-requests-page">
+      <div className="page-header pb-2 mb-2 border-bottom">
+        <h1 className="page-title mb-0">My Requests</h1>
+        <p className="text-secondary small mb-0 mt-1">Incidents and service requests you submitted.</p>
       </div>
-      <div className="row g-2 mb-3">
-        <div className="col-md-2">
-          <select className="form-select form-select-sm" value={type} onChange={(e) => setType(e.target.value)}>
-            <option value="">Any type</option>
-            <option value="Incident">Incident</option>
-            <option value="ServiceRequest">Service Request</option>
-          </select>
-        </div>
-        <div className="col-md-2">
-          <input type="text" className="form-control form-control-sm" placeholder="Status" value={status} onChange={(e) => setStatus(e.target.value)} />
-        </div>
-        <div className="col-md-2">
-          <input type="text" className="form-control form-control-sm" placeholder="Category" value={category} onChange={(e) => setCategory(e.target.value)} />
-        </div>
-        <div className="col-md-2">
-          <input type="date" className="form-control form-control-sm" value={createdFrom} onChange={(e) => setCreatedFrom(e.target.value)} />
-        </div>
-        <div className="col-md-2">
-          <input type="date" className="form-control form-control-sm" value={createdTo} onChange={(e) => setCreatedTo(e.target.value)} />
-        </div>
-        <div className="col-md-2">
-          <input type="search" className="form-control form-control-sm" placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} />
+
+      <div className="card mb-3 shadow-sm">
+        <div className="card-body py-3">
+          <div className="d-flex align-items-center gap-2 mb-2 text-secondary small fw-medium">
+            <IconFilter size={16} stroke={1.5} aria-hidden />
+            Filters
+          </div>
+          <div className="row g-2 align-items-end">
+            <div className="col-12 col-sm-6 col-md-4 col-lg-2">
+              <label className="form-label mb-1 small text-secondary">Type</label>
+              <select className="form-select form-select-sm" value={type} onChange={(e) => setType(e.target.value)}>
+                <option value="">Any type</option>
+                <option value="Incident">Incident</option>
+                <option value="ServiceRequest">Service request</option>
+              </select>
+            </div>
+            <div className="col-12 col-sm-6 col-md-4 col-lg-2">
+              <label className="form-label mb-1 small text-secondary">Status</label>
+              <input
+                type="text"
+                className="form-control form-control-sm"
+                placeholder="e.g. Approved"
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+              />
+            </div>
+            <div className="col-12 col-sm-6 col-md-4 col-lg-2">
+              <label className="form-label mb-1 small text-secondary">Category</label>
+              <input
+                type="text"
+                className="form-control form-control-sm"
+                placeholder="Category"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+              />
+            </div>
+            <div className="col-6 col-md-4 col-lg-2">
+              <label className="form-label mb-1 small text-secondary">From</label>
+              <input type="date" className="form-control form-control-sm" value={createdFrom} onChange={(e) => setCreatedFrom(e.target.value)} />
+            </div>
+            <div className="col-6 col-md-4 col-lg-2">
+              <label className="form-label mb-1 small text-secondary">To</label>
+              <input type="date" className="form-control form-control-sm" value={createdTo} onChange={(e) => setCreatedTo(e.target.value)} />
+            </div>
+            <div className="col-12 col-md-8 col-lg-2">
+              <label className="form-label mb-1 small text-secondary">Search</label>
+              <input
+                type="search"
+                className="form-control form-control-sm"
+                placeholder="Title or number…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="col-12 col-lg-auto ms-lg-auto">
+              <button type="button" className="btn btn-primary btn-sm w-100 w-lg-auto" onClick={() => void load()}>
+                Apply filters
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-      <button type="button" className="btn btn-outline-primary btn-sm mb-3" onClick={() => void load()}>
-        Apply filters
-      </button>
-      <div className="table-responsive">
-        <table className="table table-vcenter card-table table-striped">
-          <thead>
-            <tr>
-              <th>Number</th>
-              <th>Title</th>
-              <th>Type</th>
-              <th>Status</th>
-              <th>Priority</th>
-              <th>Created</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tickets.map((t) => (
-              <tr key={t.id} role="button" className="cursor-pointer" onClick={() => navigate(`/tickets/${t.id}`)}>
-                <td>{t.ticket_number}</td>
-                <td>{t.title}</td>
-                <td>{t.type}</td>
-                <td>{t.status}</td>
-                <td>{t.priority}</td>
-                <td>{new Date(t.created_at).toLocaleString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+
+      <div className="card shadow-sm">
+        <div className="card-body p-0">
+          <div className="table-responsive">
+            <table className="table table-vcenter table-hover card-table table-striped mb-0">
+              <thead className="bg-body-secondary">
+                <tr>
+                  <th>Number</th>
+                  <th>Title</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Priority</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tickets.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-secondary text-center py-4">
+                      No tickets match these filters.
+                    </td>
+                  </tr>
+                ) : (
+                  tickets.map((t) => (
+                    <tr key={t.id} role="button" className="cursor-pointer" onClick={() => navigate(`/tickets/${t.id}`)}>
+                      <td className="text-secondary">{t.ticket_number}</td>
+                      <td className="fw-medium">{t.title}</td>
+                      <td>{t.type}</td>
+                      <td>{t.status}</td>
+                      <td>{t.priority}</td>
+                      <td className="text-secondary text-nowrap">{new Date(t.created_at).toLocaleString()}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-    </>
+    </div>
   );
 }

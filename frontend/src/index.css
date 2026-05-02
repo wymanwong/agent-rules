@@ -20,3 +20,12 @@
   margin-bottom: 1rem;
   border-bottom: 1px solid var(--tblr-border-color-translucent);
 }
+
+/* My Requests – Tabler adds margin-top to .page-header inside .page-wrapper; pull title up */
+.my-requests-page > .page-header {
+  margin-top: 0 !important;
+}
+
+.page-body .container-xl > .my-requests-page {
+  margin-top: -0.75rem;
+}
