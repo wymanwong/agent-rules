@@ -7,3 +7,16 @@
 .table-responsive-stack {
   overflow-x: auto;
 }
+
+/* Ticket detail – readable description */
+.ticket-description-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Ticket detail – activity timeline line */
+.ticket-comment-thread > .ticket-comment:not(:last-child) {
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--tblr-border-color-translucent);
+}

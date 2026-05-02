@@ -1,5 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import {
+  IconArrowLeft,
+  IconCalendar,
+  IconCategory,
+  IconChartDots,
+  IconMessageCircle,
+  IconPaperclip,
+  IconRefresh,
+  IconTimeline,
+  IconUpload,
+  IconUser,
+  IconUsersGroup,
+} from '@tabler/icons-react';
 import { api, apiMultipart, authorizedDelete, fetchAuthorizedBlob } from '../api';
 import { AttachmentPicker } from '../components/AttachmentPicker';
 import {
@@ -62,6 +75,43 @@ interface AttachmentMeta {
 const incidentStatuses = ['New', 'InTriage', 'InProgress', 'PendingUser', 'Pending3rdParty', 'Resolved', 'Closed'];
 const srStatuses = ['New', 'AwaitingApproval', 'Approved', 'InProgress', 'Completed', 'Closed'];
 
+function priorityBadgeClass(priority: string): string {
+  switch (priority) {
+    case 'P1':
+      return 'badge bg-danger-lt text-danger-fg';
+    case 'P2':
+      return 'badge bg-orange-lt text-orange-fg';
+    case 'P3':
+      return 'badge bg-azure-lt text-azure-fg';
+    case 'P4':
+      return 'badge bg-secondary-lt text-secondary-fg';
+    default:
+      return 'badge bg-secondary-lt text-secondary-fg';
+  }
+}
+
+function statusBadgeClass(status: string): string {
+  const s = status.toLowerCase();
+  let cls = 'badge bg-primary-lt text-primary-fg';
+  if (s === 'closed' || s === 'resolved' || s === 'completed') cls = 'badge bg-success-lt text-success-fg';
+  else if (s.startsWith('pending')) cls = 'badge bg-warning-lt text-warning-fg';
+  else if (s === 'new' || s === 'awaitingapproval') cls = 'badge bg-azure-lt text-azure-fg';
+  else if (s === 'approved') cls = 'badge bg-teal-lt text-teal-fg';
+  return cls;
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function ticketListBackPath(role?: string): string {
+  if (role === 'EndUser') return '/my-requests';
+  if (role === 'IT' || role === 'Admin') return '/it/queue';
+  return '/';
+}
+
 export function TicketDetailPage() {
   const { id } = useParams();
   const { user } = useAuth();
@@ -69,6 +119,7 @@ export function TicketDetailPage() {
   const [data, setData] = useState<{
     ticket: Ticket;
     catalog_item?: { id: number; name: string | null } | null;
+    requester?: { id: number; name: string; email?: string };
     comments: Comment[];
     approvals: Approval[];
     assignment_history: AssignmentRow[];
@@ -261,7 +312,16 @@ export function TicketDetailPage() {
     }
   }
 
-  if (!data) return <div className="text-secondary">Loading…</div>;
+  if (!data) {
+    return (
+      <div className="d-flex justify-content-center py-5">
+        <div className="text-secondary d-flex align-items-center gap-2">
+          <span className="spinner-border spinner-border-sm" role="status" aria-hidden />
+          Loading ticket…
+        </div>
+      </div>
+    );
+  }
 
   const { ticket, comments, approvals, assignment_history: history } = data;
   const attachments = data.attachments ?? [];
@@ -276,6 +336,12 @@ export function TicketDetailPage() {
   const pendingApproval =
     user && approvals.find((a) => a.status === 'Pending' && a.approver_user_id === user.id);
 
+  const typeLabel = ticket.type === 'ServiceRequest' ? 'Service request' : 'Incident';
+  const canRemoveAttachment =
+    user?.role === 'IT' ||
+    user?.role === 'Admin' ||
+    (user?.role === 'EndUser' && ticket.requester_id === user.id);
+
   return (
     <>
       <AttachmentPreviewModal
@@ -289,193 +355,363 @@ export function TicketDetailPage() {
         onClose={closePreview}
       />
 
-      <div className="page-header mb-4">
-        <h2 className="page-title">
-          {ticket.ticket_number} — {ticket.title}
-        </h2>
-        <div className="text-secondary">
-          {ticket.type} · {ticket.status} · {ticket.priority} · Impact {ticket.impact} / Urgency {ticket.urgency}
+      <div className="page-header d-print-none">
+        <div className="row align-items-center">
+          <div className="col">
+            <div className="text-secondary small mb-1">
+              <Link to={ticketListBackPath(user?.role)} className="text-reset text-decoration-none">
+                <IconArrowLeft size={16} className="icon icon-inline me-1" aria-hidden />
+                Back to list
+              </Link>
+            </div>
+            <h1 className="page-title mb-2">
+              <span className="text-secondary fw-normal me-2">{ticket.ticket_number}</span>
+              <span className="d-inline-block">{ticket.title}</span>
+            </h1>
+            <div className="d-flex flex-wrap align-items-center gap-2">
+              <span className="badge bg-secondary-lt text-secondary-fg">{typeLabel}</span>
+              <span className={statusBadgeClass(ticket.status)}>{ticket.status.replace(/([A-Z])/g, ' $1').trim()}</span>
+              <span className={priorityBadgeClass(ticket.priority)}>{ticket.priority}</span>
+              <span className="text-secondary small d-flex align-items-center gap-1">
+                <IconChartDots size={16} stroke={1.5} aria-hidden />
+                Impact {ticket.impact} · Urgency {ticket.urgency}
+              </span>
+            </div>
+          </div>
+          <div className="col-auto ms-auto d-none d-md-block">
+            <button type="button" className="btn btn-outline-secondary" onClick={() => void refresh()}>
+              <IconRefresh size={18} className="icon" aria-hidden />
+              <span className="ms-1">Refresh</span>
+            </button>
+          </div>
         </div>
-        {ticket.type === 'ServiceRequest' && data.catalog_item?.id != null && (
-          <div className="text-secondary mt-2">
-            Catalog offering: <strong>{data.catalog_item.name ?? `Item #${data.catalog_item.id}`}</strong> (catalog ID{' '}
-            {data.catalog_item.id})
-          </div>
-        )}
-        {ticket.due_at && (
-          <div className="mt-2">
-            SLA due: <strong>{new Date(ticket.due_at).toLocaleString()}</strong>
-          </div>
-        )}
       </div>
 
       {error && <div className="alert alert-danger">{error}</div>}
 
-      <hr />
-
-      <h3 className="mt-4">Description</h3>
-      <p className="mb-4">{ticket.description}</p>
-
-      <h3 className="mb-3">Attachments</h3>
-      {attachments.length === 0 && <p className="text-secondary mb-3">No attachments yet.</p>}
-      {attachments.map((att) => (
-        <div key={att.id} className="d-flex flex-wrap align-items-center gap-2 mb-2">
-          <span>
-            {att.original_filename} ({Math.round(att.size_bytes / 1024)} KB)
-          </span>
-          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => void openPreview(att)}>
-            Preview
-          </button>
-          <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => void downloadAttachment(att)}>
-            Download
-          </button>
-          {(user?.role === 'IT' ||
-            user?.role === 'Admin' ||
-            (user?.role === 'EndUser' && ticket.requester_id === user.id)) && (
-            <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => void removeAttachment(att)}>
-              Remove
-            </button>
-          )}
-        </div>
-      ))}
-
-      <form onSubmit={uploadMoreAttachments} className="mb-4">
-        <h4 className="h5 mt-4 mb-2">Add attachments</h4>
-        <AttachmentPicker files={moreFiles} onFilesChange={setMoreFiles} />
-        <button type="submit" className="btn btn-outline-primary btn-sm" disabled={moreFiles.length === 0}>
-          Upload files
-        </button>
-      </form>
-
-      {ticket.type === 'ServiceRequest' && approvals.length > 0 && (
-        <div className="card mb-4">
-          <div className="card-header">
-            <h3 className="card-title mb-0">Approvals</h3>
+      <div className="row g-4">
+        <div className="col-lg-8">
+          <div className="card mb-4">
+            <div className="card-header">
+              <h2 className="card-title mb-0">Description</h2>
+            </div>
+            <div className="card-body">
+              <div className="ticket-description-body text-body">{ticket.description || '—'}</div>
+            </div>
           </div>
-          <div className="card-body">
-            {approvals.map((a) => (
-              <div key={a.id} className="mb-3">
-                <div>
-                  #{a.id} — approver user {a.approver_user_id}: <span className="badge bg-secondary">{a.status}</span>
+
+          <div className="card mb-4">
+            <div className="card-header">
+              <h2 className="card-title mb-0 d-flex align-items-center gap-2">
+                <IconPaperclip size={20} stroke={1.5} aria-hidden />
+                Attachments
+                <span className="badge bg-secondary-lt text-secondary-fg ms-1">{attachments.length}</span>
+              </h2>
+            </div>
+            <div className="card-body">
+              {attachments.length === 0 ? (
+                <p className="text-secondary mb-0">No attachments yet.</p>
+              ) : (
+                <div className="list-group list-group-flush">
+                  {attachments.map((att) => (
+                    <div
+                      key={att.id}
+                      className="list-group-item px-0 d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-2"
+                    >
+                      <div className="min-w-0">
+                        <div className="fw-medium text-truncate" title={att.original_filename}>
+                          {att.original_filename}
+                        </div>
+                        <div className="text-secondary small">
+                          {formatFileSize(att.size_bytes)}
+                          {att.mime_type ? ` · ${att.mime_type}` : ''}
+                        </div>
+                      </div>
+                      <div className="btn-list flex-shrink-0">
+                        <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => void openPreview(att)}>
+                          Preview
+                        </button>
+                        <button type="button" className="btn btn-sm btn-primary" onClick={() => void downloadAttachment(att)}>
+                          Download
+                        </button>
+                        {canRemoveAttachment && (
+                          <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => void removeAttachment(att)}>
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                {pendingApproval?.id === a.id && (
-                  <div className="btn-list mt-2">
-                    <button type="button" className="btn btn-primary btn-sm" onClick={() => void decideApproval(a.id, 'Approved')}>
-                      Approve
-                    </button>
-                    <button type="button" className="btn btn-danger btn-sm" onClick={() => void decideApproval(a.id, 'Rejected')}>
-                      Reject
-                    </button>
+              )}
+
+              <hr className="my-4" />
+
+              <form onSubmit={uploadMoreAttachments}>
+                <h3 className="h4 mb-3 d-flex align-items-center gap-2">
+                  <IconUpload size={20} stroke={1.5} aria-hidden />
+                  Add files
+                </h3>
+                <AttachmentPicker files={moreFiles} onFilesChange={setMoreFiles} />
+                <button type="submit" className="btn btn-primary mt-2" disabled={moreFiles.length === 0}>
+                  Upload
+                </button>
+              </form>
+            </div>
+          </div>
+
+          {ticket.type === 'ServiceRequest' && approvals.length > 0 && (
+            <div className="card mb-4">
+              <div className="card-header">
+                <h2 className="card-title mb-0">Approvals</h2>
+              </div>
+              <div className="card-body">
+                {approvals.map((a) => (
+                  <div key={a.id} className="mb-3 pb-3 border-bottom border-bottom-dashed">
+                    <div className="d-flex flex-wrap align-items-center gap-2">
+                      <span className="text-secondary small">#{a.id}</span>
+                      <span className="text-secondary small">Approver user {a.approver_user_id}</span>
+                      <span className={statusBadgeClass(a.status)}>{a.status}</span>
+                    </div>
+                    {pendingApproval?.id === a.id && (
+                      <div className="btn-list mt-3">
+                        <button type="button" className="btn btn-primary btn-sm" onClick={() => void decideApproval(a.id, 'Approved')}>
+                          Approve
+                        </button>
+                        <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => void decideApproval(a.id, 'Rejected')}>
+                          Reject
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {pendingApproval && (
+                  <div className="mt-2">
+                    <label className="form-label" htmlFor="approval-comment">
+                      Approval comment
+                    </label>
+                    <input
+                      id="approval-comment"
+                      type="text"
+                      className="form-control"
+                      value={approverComment}
+                      onChange={(e) => setApproverComment(e.target.value)}
+                    />
                   </div>
                 )}
               </div>
-            ))}
-            {pendingApproval && (
-              <div className="mt-2">
-                <label className="form-label">Approval comment</label>
-                <input
-                  type="text"
-                  className="form-control form-control-sm"
-                  value={approverComment}
-                  onChange={(e) => setApproverComment(e.target.value)}
+            </div>
+          )}
+
+          <div className="card mb-4">
+            <div className="card-header">
+              <h2 className="card-title mb-0 d-flex align-items-center gap-2">
+                <IconMessageCircle size={20} stroke={1.5} aria-hidden />
+                Activity
+                <span className="badge bg-secondary-lt text-secondary-fg ms-1">{comments.length}</span>
+              </h2>
+            </div>
+            <div className="card-body">
+              {comments.length === 0 ? (
+                <p className="text-secondary mb-0">No comments yet.</p>
+              ) : (
+                <div className="ticket-comment-thread">
+                  {comments.map((c) => (
+                    <div key={c.id} className="ticket-comment">
+                      <div className="d-flex flex-wrap align-items-baseline gap-2 mb-1">
+                        <span className="fw-medium">User #{c.author_id}</span>
+                        <span className="text-secondary small">{new Date(c.created_at).toLocaleString()}</span>
+                        {c.is_internal === 1 && <span className="badge bg-warning-lt text-warning-fg">Internal</span>}
+                      </div>
+                      <div className="text-body" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                        {c.body}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <hr className="my-4" />
+
+              <form onSubmit={postComment}>
+                <h3 className="h4 mb-3">Add {internal ? 'internal note' : 'comment'}</h3>
+                <div className="d-flex align-items-center gap-2 mb-2">
+                  <VoiceToTextButton onAppend={(t) => setComment((prev) => `${prev}${t}`)} />
+                </div>
+                <textarea
+                  className="form-control mb-3"
+                  rows={4}
+                  placeholder={internal ? 'Internal note (visible to IT only)' : 'Write a comment…'}
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
                 />
+                {showInternal && (
+                  <div className="btn-list mb-3">
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${internal ? 'btn-primary' : 'btn-outline-secondary'}`}
+                      onClick={() => setInternal(true)}
+                    >
+                      Internal
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${!internal ? 'btn-primary' : 'btn-outline-secondary'}`}
+                      onClick={() => setInternal(false)}
+                    >
+                      External
+                    </button>
+                  </div>
+                )}
+                <div className="btn-list">
+                  <button type="submit" className="btn btn-primary" disabled={!comment.trim()}>
+                    Post
+                  </button>
+                  {canClose && (
+                    <button type="button" className="btn btn-outline-secondary" onClick={() => void closeTicket()}>
+                      Close ticket
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-lg-4">
+          <div className="card mb-4">
+            <div className="card-header">
+              <h2 className="card-title mb-0">Details</h2>
+            </div>
+            <div className="card-body">
+              <dl className="row mb-0 gy-2 small">
+                <dt className="col-5 text-secondary">Opened</dt>
+                <dd className="col-7 mb-0 d-flex align-items-start gap-1">
+                  <IconCalendar size={16} className="icon text-secondary flex-shrink-0 mt-1" aria-hidden />
+                  <span>{new Date(ticket.created_at).toLocaleString()}</span>
+                </dd>
+                {ticket.due_at && (
+                  <>
+                    <dt className="col-5 text-secondary">SLA due</dt>
+                    <dd className="col-7 mb-0 fw-medium">{new Date(ticket.due_at).toLocaleString()}</dd>
+                  </>
+                )}
+                {ticket.category && (
+                  <>
+                    <dt className="col-5 text-secondary">Category</dt>
+                    <dd className="col-7 mb-0 d-flex align-items-center gap-1">
+                      <IconCategory size={16} className="icon text-secondary" aria-hidden />
+                      {ticket.category}
+                    </dd>
+                  </>
+                )}
+                <dt className="col-5 text-secondary">Requester</dt>
+                <dd className="col-7 mb-0 d-flex align-items-center gap-1">
+                  <IconUser size={16} className="icon text-secondary" aria-hidden />
+                  {data.requester ? (
+                    <>
+                      {data.requester.name}
+                      <span className="text-secondary">· #{ticket.requester_id}</span>
+                    </>
+                  ) : (
+                    <>#{ticket.requester_id}</>
+                  )}
+                </dd>
+                <dt className="col-5 text-secondary">Assignee</dt>
+                <dd className="col-7 mb-0">
+                  {data.assignee ? (
+                    <span className="d-flex align-items-center gap-1">
+                      <IconUser size={16} className="icon text-secondary" aria-hidden />
+                      {data.assignee.name}
+                    </span>
+                  ) : (
+                    <span className="text-secondary">Unassigned</span>
+                  )}
+                </dd>
+                <dt className="col-5 text-secondary">Team</dt>
+                <dd className="col-7 mb-0 d-flex align-items-center gap-1">
+                  <IconUsersGroup size={16} className="icon text-secondary" aria-hidden />
+                  {data.team?.name ?? '—'}
+                </dd>
+                {ticket.type === 'ServiceRequest' && data.catalog_item?.id != null && (
+                  <>
+                    <dt className="col-5 text-secondary">Catalog</dt>
+                    <dd className="col-7 mb-0">{data.catalog_item.name ?? `Item #${data.catalog_item.id}`}</dd>
+                  </>
+                )}
+              </dl>
+            </div>
+          </div>
+
+          {showInternal && (
+            <div className="card mb-4">
+              <div className="card-header">
+                <h2 className="card-title mb-0 d-flex align-items-center gap-2">
+                  <IconTimeline size={20} stroke={1.5} aria-hidden />
+                  IT actions
+                </h2>
               </div>
-            )}
-          </div>
-        </div>
-      )}
+              <div className="card-body">
+                <label className="form-label" htmlFor="ticket-status">
+                  Status
+                </label>
+                <select
+                  id="ticket-status"
+                  className="form-select mb-3"
+                  value={statusDraft}
+                  onChange={(e) => setStatusDraft(e.target.value)}
+                >
+                  {statuses.map((s) => (
+                    <option key={s} value={s}>
+                      {s.replace(/([A-Z])/g, ' $1').trim()}
+                    </option>
+                  ))}
+                </select>
+                <button type="button" className="btn btn-primary w-100" onClick={() => void applyStatus()}>
+                  Update status
+                </button>
 
-      {showInternal && (
-        <>
-          <h3 className="mb-2">Assignment history</h3>
-          <div className="table-responsive mb-4">
-            <table className="table table-sm table-bordered">
-              <thead>
-                <tr>
-                  <th>When</th>
-                  <th>From user</th>
-                  <th>To user</th>
-                  <th>Team change</th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.map((h) => (
-                  <tr key={h.id}>
-                    <td>{new Date(h.changed_at).toLocaleString()}</td>
-                    <td>{h.from_user_id ?? '—'}</td>
-                    <td>{h.to_user_id ?? '—'}</td>
-                    <td>
-                      {h.from_team_id ?? '—'} → {h.to_team_id ?? '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="row g-2 align-items-end mb-4">
-            <div className="col-auto">
-              <label className="form-label">Status</label>
-              <select className="form-select" value={statusDraft} onChange={(e) => setStatusDraft(e.target.value)}>
-                {statuses.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
+                <h3 className="h5 mt-4 mb-2">Assignment history</h3>
+                {history.length === 0 ? (
+                  <p className="text-secondary small mb-0">No assignment events yet.</p>
+                ) : (
+                  <div className="table-responsive">
+                    <table className="table table-sm table-vcenter card-table mb-0">
+                      <thead>
+                        <tr>
+                          <th>When</th>
+                          <th>Users</th>
+                          <th>Teams</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {history.map((h) => (
+                          <tr key={h.id}>
+                            <td className="text-secondary small text-nowrap">{new Date(h.changed_at).toLocaleString()}</td>
+                            <td className="small">
+                              {h.from_user_id ?? '—'} → {h.to_user_id ?? '—'}
+                            </td>
+                            <td className="small">
+                              {h.from_team_id ?? '—'} → {h.to_team_id ?? '—'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="col-auto">
-              <button type="button" className="btn btn-primary" onClick={() => void applyStatus()}>
-                Update status
-              </button>
-            </div>
-          </div>
-        </>
-      )}
+          )}
 
-      <h3 className="mb-3">Comments</h3>
-      {comments.map((c) => (
-        <div key={c.id} className="border-start border-3 ps-3 mb-3">
-          <div className="text-secondary small">
-            {new Date(c.created_at).toLocaleString()} · author {c.author_id}
-            {c.is_internal === 1 ? ' · internal' : ''}
-          </div>
-          <div>{c.body}</div>
-        </div>
-      ))}
-
-      <form onSubmit={postComment} className="mt-4">
-        <div className="d-flex align-items-center gap-2 mb-2">
-          <span className="fw-medium">{internal ? 'Internal note' : 'Comment'}</span>
-          <VoiceToTextButton onAppend={(t) => setComment((prev) => `${prev}${t}`)} />
-        </div>
-        <textarea
-          className="form-control mb-2"
-          rows={3}
-          placeholder={internal ? 'Internal note' : 'Comment'}
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-        />
-        {showInternal && (
-          <div className="btn-list mb-2">
-            <button type="button" className={`btn btn-sm ${internal ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setInternal(true)}>
-              Internal
-            </button>
-            <button type="button" className={`btn btn-sm ${!internal ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setInternal(false)}>
-              External
+          <div className="d-grid d-md-none">
+            <button type="button" className="btn btn-outline-secondary" onClick={() => void refresh()}>
+              <IconRefresh size={18} className="icon" aria-hidden />
+              <span className="ms-1">Refresh</span>
             </button>
           </div>
-        )}
-        <button type="submit" className="btn btn-outline-primary">
-          Add comment
-        </button>
-      </form>
-
-      {canClose && (
-        <button type="button" className="btn btn-secondary mt-3" onClick={() => void closeTicket()}>
-          Close ticket
-        </button>
-      )}
+        </div>
+      </div>
     </>
   );
 }
