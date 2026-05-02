@@ -1,7 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, apiMultipart, authorizedDelete, fetchAuthorizedBlob } from '../api';
 import { AttachmentPicker } from '../components/AttachmentPicker';
+import {
+  AttachmentPreviewModal,
+  attachmentPreviewCategory,
+} from '../components/AttachmentPreviewModal';
 import { VoiceToTextButton } from '../components/VoiceToTextButton';
 import { useAuth } from '../auth/AuthContext';
 
@@ -79,6 +83,39 @@ export function TicketDetailPage() {
   const [approverComment, setApproverComment] = useState('');
   const [moreFiles, setMoreFiles] = useState<File[]>([]);
 
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewTitle, setPreviewTitle] = useState('');
+  const [previewMime, setPreviewMime] = useState('');
+  const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
+  const [previewText, setPreviewText] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const previewBlobUrlRef = useRef<string | null>(null);
+
+  function revokePreviewBlob() {
+    if (previewBlobUrlRef.current) {
+      URL.revokeObjectURL(previewBlobUrlRef.current);
+      previewBlobUrlRef.current = null;
+    }
+    setPreviewBlobUrl(null);
+  }
+
+  function closePreview() {
+    revokePreviewBlob();
+    setPreviewOpen(false);
+    setPreviewText(null);
+    setPreviewError(null);
+    setPreviewLoading(false);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (previewBlobUrlRef.current) {
+        URL.revokeObjectURL(previewBlobUrlRef.current);
+      }
+    };
+  }, []);
+
   async function refresh() {
     if (!id) return;
     const res = await api<typeof data>(`/tickets/${id}`);
@@ -149,6 +186,41 @@ export function TicketDetailPage() {
     }
   }
 
+  async function openPreview(att: AttachmentMeta) {
+    if (!id) return;
+    setError(null);
+    revokePreviewBlob();
+    setPreviewTitle(att.original_filename || `Attachment ${att.id}`);
+    setPreviewMime(att.mime_type || '');
+    setPreviewText(null);
+    setPreviewError(null);
+    setPreviewOpen(true);
+    const kind = attachmentPreviewCategory(att.mime_type || '');
+
+    if (kind === 'none') {
+      setPreviewLoading(false);
+      return;
+    }
+
+    setPreviewLoading(true);
+    try {
+      const blob = await fetchAuthorizedBlob(`/tickets/${id}/attachments/${att.id}/download`);
+      if (kind === 'text') {
+        const text = await blob.text();
+        setPreviewText(text);
+        setPreviewLoading(false);
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      previewBlobUrlRef.current = url;
+      setPreviewBlobUrl(url);
+    } catch (err) {
+      setPreviewError(err instanceof Error ? err.message : 'Preview failed');
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
+
   async function removeAttachment(att: AttachmentMeta) {
     if (!id) return;
     setError(null);
@@ -206,6 +278,17 @@ export function TicketDetailPage() {
 
   return (
     <>
+      <AttachmentPreviewModal
+        open={previewOpen}
+        filename={previewTitle}
+        mimeType={previewMime}
+        blobUrl={previewBlobUrl}
+        textContent={previewText}
+        loading={previewLoading}
+        error={previewError}
+        onClose={closePreview}
+      />
+
       <div className="page-header mb-4">
         <h2 className="page-title">
           {ticket.ticket_number} — {ticket.title}
@@ -240,6 +323,9 @@ export function TicketDetailPage() {
           <span>
             {att.original_filename} ({Math.round(att.size_bytes / 1024)} KB)
           </span>
+          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => void openPreview(att)}>
+            Preview
+          </button>
           <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => void downloadAttachment(att)}>
             Download
           </button>
