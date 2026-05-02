@@ -50,7 +50,7 @@ Password for all: `password123`
 
 - **Knowledge GET** `/knowledge/articles` and `/knowledge/articles/:id` are public for published articles; optional JWT unlocks unpublished listing for Admin.
 - **Tickets**: `POST /tickets` creates incidents or requests; ticket number `IT-######` is set after insert.
-- **Catalog**: Admin UI lives at `/admin/catalog` (list + configure). **GET** `/catalog/items/:id` (Admin JWT) loads one item for editing. **POST** `/catalog/items/:id/requests` creates a service request whose row links to that offering via **`catalog_item_id`** (not hardcoded in app code). Ticket detail API returns **`catalog_item`** `{ id, name }` when linked. If `default_priority` is set on the item it overrides impact×urgency for ticket priority and SLA; optional approval uses first Admin as approver when `requires_manager_approval` is set.
+- **Catalog**: Admin configures offerings at `/admin/catalog` using plain forms — **extra questions** are rows (label, optional field key, short vs paragraph). Stored as **`extra_form_fields_json`**; API returns **`extra_form_fields`** array on catalog endpoints (legacy **`form_schema_json`** is derived internally for compatibility). **POST** `/catalog/items/:id/requests` creates a service request linked via **`catalog_item_id`**. Ticket detail returns **`catalog_item`** `{ id, name }` when linked.
 
 ## Tests
 

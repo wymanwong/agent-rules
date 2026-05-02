@@ -17,20 +17,14 @@ import { useEffect, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../api';
 import type { CatalogItemDto } from './AdminCatalogListPage';
+import { CatalogExtraQuestionsEditor, type ExtraQuestionRow } from './CatalogExtraQuestionsEditor';
 
 const IMPACTS = ['SingleUser', 'Department', 'Site', 'Organization'] as const;
 const URGENCIES = ['Low', 'Medium', 'High', 'Critical'] as const;
 const PRIORITIES = ['', 'P1', 'P2', 'P3', 'P4'] as const;
 
-const DEFAULT_SCHEMA = `{
-  "fields": [
-    { "name": "details", "label": "Additional details", "type": "text" }
-  ]
-}`;
-
-function normalizeSchemaJson(raw: string): string {
-  const parsed = JSON.parse(raw) as unknown;
-  return JSON.stringify(parsed);
+interface CatalogApiItem extends CatalogItemDto {
+  extra_form_fields?: ExtraQuestionRow[];
 }
 
 export function AdminCatalogConfigurePage() {
@@ -51,7 +45,7 @@ export function AdminCatalogConfigurePage() {
   const [defaultPriority, setDefaultPriority] = useState<string>('');
   const [requiresApproval, setRequiresApproval] = useState(false);
   const [isPublished, setIsPublished] = useState(true);
-  const [formSchemaJson, setFormSchemaJson] = useState(DEFAULT_SCHEMA);
+  const [extraQuestions, setExtraQuestions] = useState<ExtraQuestionRow[]>([]);
 
   useEffect(() => {
     if (isNew || Number.isNaN(idNum)) {
@@ -63,7 +57,7 @@ export function AdminCatalogConfigurePage() {
       setLoading(true);
       setError(null);
       try {
-        const r = await api<{ item: CatalogItemDto & { form_schema_json: string } }>(`/catalog/items/${idNum}`);
+        const r = await api<{ item: CatalogApiItem }>(`/catalog/items/${idNum}`);
         if (cancelled) return;
         const it = r.item;
         setName(it.name);
@@ -76,11 +70,16 @@ export function AdminCatalogConfigurePage() {
         setDefaultPriority(it.default_priority ?? '');
         setRequiresApproval(it.requires_manager_approval === 1);
         setIsPublished(it.is_published === 1);
-        try {
-          setFormSchemaJson(JSON.stringify(JSON.parse(it.form_schema_json || '{}'), null, 2));
-        } catch {
-          setFormSchemaJson(it.form_schema_json || DEFAULT_SCHEMA);
-        }
+        const ef = it.extra_form_fields;
+        setExtraQuestions(
+          Array.isArray(ef) && ef.length > 0
+            ? ef.map((x) => ({
+                key: typeof x.key === 'string' ? x.key : '',
+                label: typeof x.label === 'string' ? x.label : '',
+                kind: x.kind === 'paragraph' ? 'paragraph' : 'short_text',
+              }))
+            : [],
+        );
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load item');
       } finally {
@@ -95,13 +94,14 @@ export function AdminCatalogConfigurePage() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    let schemaStr: string;
-    try {
-      schemaStr = normalizeSchemaJson(formSchemaJson);
-    } catch {
-      setError('Form schema must be valid JSON');
-      return;
-    }
+
+    const trimmed = extraQuestions
+      .map((r) => ({
+        key: r.key.trim(),
+        label: r.label.trim(),
+        kind: r.kind,
+      }))
+      .filter((r) => r.label.length > 0);
 
     const body = {
       name,
@@ -113,7 +113,7 @@ export function AdminCatalogConfigurePage() {
       default_urgency: defaultUrgency,
       default_priority: defaultPriority || null,
       requires_manager_approval: requiresApproval,
-      form_schema_json: schemaStr,
+      extra_form_fields: trimmed,
       is_published: isPublished,
     };
 
@@ -256,23 +256,7 @@ export function AdminCatalogConfigurePage() {
       />
 
       <Divider sx={{ my: 2 }} />
-      <Typography variant="subtitle2" gutterBottom>
-        Extra form fields (JSON)
-      </Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-        Use <code>{`{ "fields": [ { "name": "...", "label": "...", "type": "text" } ] }`}</code>. Stored verbatim; invalid JSON
-        blocks save.
-      </Typography>
-      <TextField
-        label="form_schema_json"
-        fullWidth
-        multiline
-        minRows={10}
-        value={formSchemaJson}
-        onChange={(e) => setFormSchemaJson(e.target.value)}
-        sx={{ mb: 2, fontFamily: 'monospace' }}
-        slotProps={{ htmlInput: { style: { fontFamily: 'inherit' } } }}
-      />
+      <CatalogExtraQuestionsEditor value={extraQuestions} onChange={setExtraQuestions} />
 
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
         <Button type="submit" variant="contained">

@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS service_catalog_items (
   default_priority TEXT,
   requires_manager_approval INTEGER NOT NULL DEFAULT 0,
   form_schema_json TEXT NOT NULL,
+  extra_form_fields_json TEXT NOT NULL DEFAULT '[]',
   is_published INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL

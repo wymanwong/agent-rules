@@ -12,6 +12,7 @@ export interface CatalogItemRow {
   default_priority: string | null;
   requires_manager_approval: number;
   form_schema_json: string;
+  extra_form_fields_json: string;
   is_published: number;
   created_at: string;
   updated_at: string;
@@ -37,11 +38,11 @@ export function insertItem(db: Database, row: Omit<CatalogItemRow, 'id'>): numbe
       `INSERT INTO service_catalog_items (
         name, description, type, default_category, default_subcategory,
         default_impact, default_urgency, default_priority, requires_manager_approval,
-        form_schema_json, is_published, created_at, updated_at
+        form_schema_json, extra_form_fields_json, is_published, created_at, updated_at
       ) VALUES (
         @name, @description, @type, @default_category, @default_subcategory,
         @default_impact, @default_urgency, @default_priority, @requires_manager_approval,
-        @form_schema_json, @is_published, @created_at, @updated_at
+        @form_schema_json, @extra_form_fields_json, @is_published, @created_at, @updated_at
       )`,
     )
     .run(row);

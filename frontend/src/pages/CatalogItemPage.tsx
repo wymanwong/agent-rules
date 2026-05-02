@@ -5,11 +5,17 @@ import { api, apiMultipart } from '../api';
 import { AttachmentPicker } from '../components/AttachmentPicker';
 import { VoiceToTextButton } from '../components/VoiceToTextButton';
 
+interface ExtraFieldDef {
+  key: string;
+  label: string;
+  kind: 'short_text' | 'paragraph';
+}
+
 interface Item {
   id: number;
   name: string;
   description: string;
-  form_schema_json: string;
+  extra_form_fields?: ExtraFieldDef[];
   default_category: string | null;
   requires_manager_approval: number;
 }
@@ -36,14 +42,16 @@ export function CatalogItemPage() {
     });
   }, [id]);
 
-  function parseFields(): { name: string; label: string }[] {
-    if (!item) return [];
-    try {
-      const schema = JSON.parse(item.form_schema_json) as { fields?: { name: string; label: string }[] };
-      return schema.fields ?? [];
-    } catch {
-      return [];
+  function fields(): ExtraFieldDef[] {
+    const ef = item?.extra_form_fields;
+    if (Array.isArray(ef) && ef.length > 0) {
+      return ef.map((f) => ({
+        key: String(f.key ?? ''),
+        label: String(f.label ?? ''),
+        kind: f.kind === 'paragraph' ? 'paragraph' : 'short_text',
+      }));
     }
+    return [];
   }
 
   async function submit(e: React.FormEvent) {
@@ -69,7 +77,7 @@ export function CatalogItemPage() {
 
   if (!item) return <Typography>Loading…</Typography>;
 
-  const fields = parseFields();
+  const questionRows = fields();
 
   return (
     <Box component="form" onSubmit={submit} sx={{ maxWidth: 720 }}>
@@ -99,20 +107,18 @@ export function CatalogItemPage() {
         sx={{ mb: 2 }}
       />
       <AttachmentPicker files={files} onFilesChange={setFiles} helperText="Attach files or capture a photo before submitting." />
-      {fields.map((f) => (
+      {questionRows.map((f) => (
         <TextField
-          key={f.name}
-          label={f.label || f.name}
+          key={f.key || f.label}
+          label={f.label || f.key}
           fullWidth
-          value={extra[f.name] ?? ''}
-          onChange={(e) => setExtra({ ...extra, [f.name]: e.target.value })}
+          multiline={f.kind === 'paragraph'}
+          minRows={f.kind === 'paragraph' ? 3 : 1}
+          value={extra[f.key] ?? ''}
+          onChange={(e) => setExtra({ ...extra, [f.key]: e.target.value })}
           sx={{ mb: 2 }}
         />
       ))}
-      <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
-        Schema: {item.form_schema_json.slice(0, 200)}
-        {item.form_schema_json.length > 200 ? '…' : ''}
-      </Typography>
       <Button type="submit" variant="contained">
         Submit request
       </Button>

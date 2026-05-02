@@ -10,6 +10,7 @@ import * as userRepo from '../repositories/userRepository.js';
 import * as catalogRepo from '../repositories/catalogRepository.js';
 import * as kbRepo from '../repositories/knowledgeRepository.js';
 import { hashPassword } from '../services/authService.js';
+import { extraFieldsToFormSchemaJson, normalizeExtraFields } from '../services/catalogFormFields.js';
 
 async function main(): Promise<void> {
   const force = process.argv.includes('--force');
@@ -105,6 +106,10 @@ async function main(): Promise<void> {
     updated_at: now,
   });
 
+  const seedExtra1 = normalizeExtraFields([
+    { key: 'softwareName', label: 'Software name', kind: 'short_text' },
+    { key: 'businessReason', label: 'Business reason', kind: 'paragraph' },
+  ]);
   catalogRepo.insertItem(db, {
     name: 'Request software installation',
     description: 'Standard request to install approved corporate software.',
@@ -115,17 +120,14 @@ async function main(): Promise<void> {
     default_urgency: 'Medium',
     default_priority: null,
     requires_manager_approval: 0,
-    form_schema_json: JSON.stringify({
-      fields: [
-        { name: 'softwareName', label: 'Software name', type: 'text' },
-        { name: 'businessReason', label: 'Business reason', type: 'text' },
-      ],
-    }),
+    form_schema_json: extraFieldsToFormSchemaJson(seedExtra1),
+    extra_form_fields_json: JSON.stringify(seedExtra1),
     is_published: 1,
     created_at: now,
     updated_at: now,
   });
 
+  const seedExtra2 = normalizeExtraFields([{ key: 'system', label: 'Target system', kind: 'short_text' }]);
   catalogRepo.insertItem(db, {
     name: 'Request elevated access',
     description: 'Requires manager approval before fulfillment.',
@@ -136,9 +138,8 @@ async function main(): Promise<void> {
     default_urgency: 'High',
     default_priority: null,
     requires_manager_approval: 1,
-    form_schema_json: JSON.stringify({
-      fields: [{ name: 'system', label: 'Target system', type: 'text' }],
-    }),
+    form_schema_json: extraFieldsToFormSchemaJson(seedExtra2),
+    extra_form_fields_json: JSON.stringify(seedExtra2),
     is_published: 1,
     created_at: now,
     updated_at: now,
