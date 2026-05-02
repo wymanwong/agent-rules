@@ -165,6 +165,16 @@ async function main(): Promise<void> {
     updated_at: now,
   });
 
+  kbRepo.insertArticle(db, {
+    title: 'Welcome to the IT portal',
+    body: 'Browse Knowledge for fixes, open incidents when something breaks, and use the catalog for standard requests.',
+    category: 'Getting started',
+    tags: 'portal,introduction',
+    is_published: 1,
+    created_at: now,
+    updated_at: now,
+  });
+
   console.info('Database initialized at', resolved);
   console.info('Demo logins (password: password123):');
   console.info('  admin@example.com (Admin)');

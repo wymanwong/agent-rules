@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
+import { KNOWLEDGE_CATEGORY_LABELS } from '../constants/knowledgeCategories';
 
 interface UserRow {
   id: number;
@@ -211,11 +212,22 @@ export function AdminPage() {
 function MiniKbCreate({ onDone }: { onDone: () => void }) {
   const [title, setTitle] = useState('New article');
   const [body, setBody] = useState('Body text');
+  const [category, setCategory] = useState<string>(KNOWLEDGE_CATEGORY_LABELS[KNOWLEDGE_CATEGORY_LABELS.length - 1] ?? 'General');
   return (
     <div className="row g-2" style={{ maxWidth: 480 }}>
       <div className="col-12">
         <label className="form-label">Title</label>
         <input type="text" className="form-control" value={title} onChange={(e) => setTitle(e.target.value)} />
+      </div>
+      <div className="col-12">
+        <label className="form-label">Category</label>
+        <select className="form-select" value={category} onChange={(e) => setCategory(e.target.value)}>
+          {KNOWLEDGE_CATEGORY_LABELS.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
       </div>
       <div className="col-12">
         <label className="form-label">Body</label>
@@ -228,7 +240,7 @@ function MiniKbCreate({ onDone }: { onDone: () => void }) {
           onClick={() =>
             void api('/knowledge/articles', {
               method: 'POST',
-              json: { title, body, is_published: true },
+              json: { title, body, category, is_published: true },
             }).then(onDone)
           }
         >
