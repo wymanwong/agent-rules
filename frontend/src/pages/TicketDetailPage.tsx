@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   IconArrowLeft,
@@ -7,7 +7,6 @@ import {
   IconChartDots,
   IconMessageCircle,
   IconPaperclip,
-  IconRefresh,
   IconTimeline,
   IconUpload,
   IconUser,
@@ -74,6 +73,9 @@ interface AttachmentMeta {
 
 const incidentStatuses = ['New', 'InTriage', 'InProgress', 'PendingUser', 'Pending3rdParty', 'Resolved', 'Closed'];
 const srStatuses = ['New', 'AwaitingApproval', 'Approved', 'InProgress', 'Completed', 'Closed'];
+
+/** How often to refetch ticket detail while this page is open (ms). */
+const TICKET_POLL_MS = 15_000;
 
 /** Solid Tabler `text-bg-*` pairs — avoids unreadable lt+tint combos under `.badge`. */
 function priorityBadgeClass(priority: string): string {
@@ -173,18 +175,39 @@ export function TicketDetailPage() {
     };
   }, []);
 
-  async function refresh() {
-    if (!id) return;
-    const res = await api<typeof data>(`/tickets/${id}`);
-    setData(res as typeof data);
-    if (res?.ticket) setStatusDraft(res.ticket.status);
-    setMoreFiles([]);
-  }
+  const refresh = useCallback(
+    async (opts?: { clearPendingUploads?: boolean }) => {
+      if (!id) return;
+      const res = await api<typeof data>(`/tickets/${id}`);
+      setData(res as typeof data);
+      if (res?.ticket) setStatusDraft(res.ticket.status);
+      if (opts?.clearPendingUploads !== false) setMoreFiles([]);
+    },
+    [id],
+  );
 
   useEffect(() => {
     void refresh().catch(() => navigate('/'));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, refresh, navigate]);
+
+  useEffect(() => {
+    if (!id) return;
+    const tick = () => {
+      if (document.visibilityState !== 'visible') return;
+      void refresh({ clearPendingUploads: false }).catch(() => {
+        /* ignore background poll errors */
+      });
+    };
+    const timer = window.setInterval(tick, TICKET_POLL_MS);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') tick();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [id, refresh]);
 
   async function postComment(e: React.FormEvent) {
     e.preventDefault();
@@ -362,34 +385,24 @@ export function TicketDetailPage() {
       />
 
       <div className="page-header d-print-none mb-4 pb-2 pb-lg-3">
-        <div className="row align-items-center">
-          <div className="col">
-            <div className="text-secondary small mb-1">
-              <Link to={ticketListBackPath(user?.role)} className="text-reset text-decoration-none">
-                <IconArrowLeft size={16} className="icon icon-inline me-1" aria-hidden />
-                Back to list
-              </Link>
-            </div>
-            <h1 className="page-title mb-2">
-              <span className="text-secondary fw-normal me-2">{ticket.ticket_number}</span>
-              <span className="d-inline-block">{ticket.title}</span>
-            </h1>
-            <div className="d-flex flex-wrap align-items-center gap-2">
-              <span className="badge text-bg-secondary">{typeLabel}</span>
-              <span className={statusBadgeClass(ticket.status)}>{spacedLabel(ticket.status)}</span>
-              <span className={priorityBadgeClass(ticket.priority)}>{ticket.priority}</span>
-              <span className="text-secondary small d-flex align-items-center gap-1">
-                <IconChartDots size={16} stroke={1.5} aria-hidden />
-                Impact {ticket.impact} · Urgency {ticket.urgency}
-              </span>
-            </div>
-          </div>
-          <div className="col-auto ms-auto d-none d-md-block">
-            <button type="button" className="btn btn-outline-secondary" onClick={() => void refresh()}>
-              <IconRefresh size={18} className="icon" aria-hidden />
-              <span className="ms-1">Refresh</span>
-            </button>
-          </div>
+        <div className="text-secondary small mb-1">
+          <Link to={ticketListBackPath(user?.role)} className="text-reset text-decoration-none">
+            <IconArrowLeft size={16} className="icon icon-inline me-1" aria-hidden />
+            Back to list
+          </Link>
+        </div>
+        <h1 className="page-title mb-2">
+          <span className="text-secondary fw-normal me-2">{ticket.ticket_number}</span>
+          <span className="d-inline-block">{ticket.title}</span>
+        </h1>
+        <div className="d-flex flex-wrap align-items-center gap-2">
+          <span className="badge text-bg-secondary">{typeLabel}</span>
+          <span className={statusBadgeClass(ticket.status)}>{spacedLabel(ticket.status)}</span>
+          <span className={priorityBadgeClass(ticket.priority)}>{ticket.priority}</span>
+          <span className="text-secondary small d-flex align-items-center gap-1">
+            <IconChartDots size={16} stroke={1.5} aria-hidden />
+            Impact {ticket.impact} · Urgency {ticket.urgency}
+          </span>
         </div>
       </div>
 
@@ -707,13 +720,6 @@ export function TicketDetailPage() {
               </div>
             </div>
           )}
-
-          <div className="d-grid d-md-none mb-4">
-            <button type="button" className="btn btn-outline-secondary" onClick={() => void refresh()}>
-              <IconRefresh size={18} className="icon" aria-hidden />
-              <span className="ms-1">Refresh</span>
-            </button>
-          </div>
         </div>
       </div>
     </>
