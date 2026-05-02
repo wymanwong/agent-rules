@@ -1,6 +1,26 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 
+/** Close responsive navbar collapse after navigation (Bootstrap navbar-expand-md uses md ≥768px). */
+function closeNavbarCollapseOnNavigate() {
+  if (typeof window === 'undefined' || !window.matchMedia('(max-width: 767.98px)').matches) {
+    return;
+  }
+  const menu = document.getElementById('navbar-menu');
+  if (!menu) return;
+  menu.classList.remove('show', 'collapsing');
+  menu.style.height = '';
+  menu.style.overflow = '';
+
+  const toggler = document.querySelector<HTMLButtonElement>(
+    'button.navbar-toggler[data-bs-target="#navbar-menu"]',
+  );
+  if (toggler) {
+    toggler.classList.add('collapsed');
+    toggler.setAttribute('aria-expanded', 'false');
+  }
+}
+
 export function AppLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -8,11 +28,15 @@ export function AppLayout() {
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `nav-link ${isActive ? 'active' : ''}`;
 
+  const navClick = () => {
+    closeNavbarCollapseOnNavigate();
+  };
+
   return (
     <div className="page">
       <header className="navbar navbar-expand-md navbar-light d-print-none border-bottom bg-white sticky-top shadow-sm">
         <div className="container-fluid px-3">
-          <NavLink className="navbar-brand fw-semibold text-primary" to="/">
+          <NavLink className="navbar-brand fw-semibold text-primary" to="/" onClick={navClick}>
             IT Helpdesk
           </NavLink>
           <button
@@ -29,25 +53,25 @@ export function AppLayout() {
           <div className="collapse navbar-collapse" id="navbar-menu">
             <ul className="navbar-nav me-auto mb-2 mb-md-0 gap-md-1">
               <li className="nav-item">
-                <NavLink className={linkClass} to="/">
+                <NavLink className={linkClass} to="/" onClick={navClick}>
                   Portal
                 </NavLink>
               </li>
               <li className="nav-item">
-                <NavLink className={linkClass} to="/knowledge">
+                <NavLink className={linkClass} to="/knowledge" onClick={navClick}>
                   Knowledge
                 </NavLink>
               </li>
               {user && (
                 <>
                   <li className="nav-item">
-                    <NavLink className={linkClass} to="/my-requests">
+                    <NavLink className={linkClass} to="/my-requests" onClick={navClick}>
                       My Requests
                     </NavLink>
                   </li>
                   {(user.role === 'IT' || user.role === 'Admin') && (
                     <li className="nav-item">
-                      <NavLink className={linkClass} to="/it/queue">
+                      <NavLink className={linkClass} to="/it/queue" onClick={navClick}>
                         IT Queue
                       </NavLink>
                     </li>
@@ -55,12 +79,12 @@ export function AppLayout() {
                   {user.role === 'Admin' && (
                     <>
                       <li className="nav-item">
-                        <NavLink className={linkClass} to="/admin">
+                        <NavLink className={linkClass} to="/admin" onClick={navClick}>
                           Admin
                         </NavLink>
                       </li>
                       <li className="nav-item d-none d-lg-block">
-                        <NavLink className={linkClass} to="/admin/catalog">
+                        <NavLink className={linkClass} to="/admin/catalog" onClick={navClick}>
                           Catalog
                         </NavLink>
                       </li>
@@ -79,6 +103,7 @@ export function AppLayout() {
                     type="button"
                     className="btn btn-outline-secondary btn-sm"
                     onClick={() => {
+                      closeNavbarCollapseOnNavigate();
                       logout();
                       navigate('/login');
                     }}
@@ -87,7 +112,7 @@ export function AppLayout() {
                   </button>
                 </>
               ) : (
-                <NavLink className="btn btn-primary btn-sm" to="/login">
+                <NavLink className="btn btn-primary btn-sm" to="/login" onClick={navClick}>
                   Sign in
                 </NavLink>
               )}
