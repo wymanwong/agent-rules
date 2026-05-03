@@ -8,7 +8,7 @@ export default defineConfig({
     port: 5173,
     host: true,
     proxy: {
-      '^/(auth|health|tickets|catalog|knowledge|admin|live)': {
+      '^/(auth|health|tickets|catalog|knowledge|admin|live|it)': {
         target: 'http://127.0.0.1:4000',
         changeOrigin: true,
       },

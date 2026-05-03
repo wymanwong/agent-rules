@@ -3,7 +3,11 @@ import { getToken } from '../api';
 
 export type LiveEventPayload =
   | { type: 'connected'; at?: string }
-  | { type: 'tickets' | 'ticket' | 'knowledge' | 'catalog'; ticketId?: number; at: string };
+  | {
+      type: 'tickets' | 'ticket' | 'knowledge' | 'catalog' | 'staff';
+      ticketId?: number;
+      at: string;
+    };
 
 /**
  * Subscribe to server-sent events for cross-user live updates.

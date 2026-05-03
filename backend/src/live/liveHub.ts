@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 
 export type LivePayload = {
-  type: 'tickets' | 'ticket' | 'knowledge' | 'catalog';
+  type: 'tickets' | 'ticket' | 'knowledge' | 'catalog' | 'staff';
   ticketId?: number;
   at: string;
 };

@@ -1,13 +1,17 @@
 import type { Response } from 'express';
 import type { AuthRequest } from '../middleware/auth.js';
 import { subscribeLive } from '../live/liveHub.js';
+import { presenceRegister, presenceUnregister } from '../live/presenceHub.js';
 
-/** Server-Sent Events stream for live UI updates (tickets, KB, catalog). */
+/** Server-Sent Events stream for live UI updates (tickets, KB, catalog, staff presence). */
 export function liveSse(req: AuthRequest, res: Response): void {
   if (!req.user) {
     res.status(401).end();
     return;
   }
+  const userId = req.user.userId;
+  presenceRegister(userId);
+
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
@@ -35,5 +39,6 @@ export function liveSse(req: AuthRequest, res: Response): void {
   req.on('close', () => {
     clearInterval(keepAlive);
     unsub();
+    presenceUnregister(userId);
   });
 }
