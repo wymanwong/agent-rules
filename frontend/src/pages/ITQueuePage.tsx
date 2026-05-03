@@ -5,6 +5,7 @@ import { api } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { TicketAssignmentPanel } from '../components/TicketAssignmentPanel';
 import { useLiveEvents } from '../hooks/useLiveEvents';
+import { ensureAssignmentMeta, type AssignmentMetaPayload } from '../tickets/assignmentMetaCache';
 
 interface TicketRow {
   id: number;
@@ -30,6 +31,7 @@ export function ITQueuePage() {
   const [category, setCategory] = useState('');
   const [sort, setSort] = useState<'created_at' | 'due_at'>('created_at');
   const [assignTicket, setAssignTicket] = useState<TicketRow | null>(null);
+  const [assignmentMeta, setAssignmentMeta] = useState<AssignmentMetaPayload | null>(null);
 
   const load = useCallback(async () => {
     const params = new URLSearchParams({ limit: '100' });
@@ -52,6 +54,13 @@ export function ITQueuePage() {
   useEffect(() => {
     void load().catch(() => {});
   }, [load]);
+
+  useEffect(() => {
+    if (user?.role !== 'IT' && user?.role !== 'Admin') return;
+    void ensureAssignmentMeta()
+      .then((m) => setAssignmentMeta(m))
+      .catch(() => {});
+  }, [user?.role]);
 
   useLiveEvents(Boolean(user), () => {
     void load().catch(() => {});
@@ -153,6 +162,7 @@ export function ITQueuePage() {
                   initialTeamId={assignTicket.team_id}
                   initialAssigneeId={assignTicket.assignee_id}
                   compact
+                  assignmentMeta={assignmentMeta ?? undefined}
                   onSaved={() => {
                     void load();
                     setAssignTicket(null);

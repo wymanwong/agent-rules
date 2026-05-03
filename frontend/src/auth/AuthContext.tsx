@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { api, getToken, setToken } from '../api';
+import { clearAssignmentMetaCache, warmAssignmentMeta } from '../tickets/assignmentMetaCache';
 
 export type UserRole = 'EndUser' | 'IT' | 'Admin';
 
@@ -41,12 +42,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!me) {
         setToken(null);
         setUser(null);
+        clearAssignmentMetaCache();
       } else {
         setUser(me);
+        if (me.role === 'IT' || me.role === 'Admin') warmAssignmentMeta();
       }
     } catch {
       setToken(null);
       setUser(null);
+      clearAssignmentMetaCache();
     } finally {
       setLoading(false);
     }
@@ -63,11 +67,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     setToken(res.token);
     setUser(res.user);
+    if (res.user.role === 'IT' || res.user.role === 'Admin') warmAssignmentMeta();
   }, []);
 
   const logout = useCallback(() => {
     setToken(null);
     setUser(null);
+    clearAssignmentMetaCache();
   }, []);
 
   const value = useMemo(

@@ -1,17 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api';
+import { ensureAssignmentMeta, type StaffOption, type TeamOption } from '../tickets/assignmentMetaCache';
 
-export interface TeamOption {
-  id: number;
-  name: string;
-}
-
-export interface StaffOption {
-  id: number;
-  name: string;
-  email: string;
-  team_id: number | null;
-}
+export type { StaffOption, TeamOption };
 
 interface Props {
   ticketId: number;
@@ -20,6 +11,8 @@ interface Props {
   onSaved?: () => void;
   /** Smaller controls for table / modal */
   compact?: boolean;
+  /** When provided, skip fetching assignment-meta (e.g. prefetched on IT queue). */
+  assignmentMeta?: { teams: TeamOption[]; staff: StaffOption[] };
 }
 
 export function TicketAssignmentPanel({
@@ -28,12 +21,13 @@ export function TicketAssignmentPanel({
   initialAssigneeId,
   onSaved,
   compact,
+  assignmentMeta: assignmentMetaProp,
 }: Props) {
-  const [teams, setTeams] = useState<TeamOption[]>([]);
-  const [staff, setStaff] = useState<StaffOption[]>([]);
+  const [teams, setTeams] = useState<TeamOption[]>(() => assignmentMetaProp?.teams ?? []);
+  const [staff, setStaff] = useState<StaffOption[]>(() => assignmentMetaProp?.staff ?? []);
   const [teamId, setTeamId] = useState<string>(initialTeamId != null ? String(initialTeamId) : '');
   const [assigneeId, setAssigneeId] = useState<string>(initialAssigneeId != null ? String(initialAssigneeId) : '');
-  const [loadingMeta, setLoadingMeta] = useState(true);
+  const [loadingMeta, setLoadingMeta] = useState(!assignmentMetaProp);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -43,9 +37,15 @@ export function TicketAssignmentPanel({
   }, [ticketId, initialTeamId, initialAssigneeId]);
 
   useEffect(() => {
+    if (assignmentMetaProp) {
+      setTeams(assignmentMetaProp.teams);
+      setStaff(assignmentMetaProp.staff);
+      setLoadingMeta(false);
+      return;
+    }
     let cancelled = false;
     setLoadingMeta(true);
-    void api<{ teams: TeamOption[]; staff: StaffOption[] }>('/tickets/assignment-meta')
+    void ensureAssignmentMeta()
       .then((r) => {
         if (!cancelled) {
           setTeams(r.teams);
@@ -61,7 +61,7 @@ export function TicketAssignmentPanel({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [assignmentMetaProp]);
 
   const onAssigneeChange = useCallback(
     (value: string) => {
