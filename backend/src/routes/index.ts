@@ -10,7 +10,7 @@ import { createTicketController } from '../controllers/ticketController.js';
 import { createCatalogController } from '../controllers/catalogController.js';
 import { createKnowledgeController } from '../controllers/knowledgeController.js';
 import { createAdminController } from '../controllers/adminController.js';
-import { uploadAttachmentsMemory } from '../middleware/upload.js';
+import { uploadAttachmentsMemory, uploadKnowledgeImageMemory } from '../middleware/upload.js';
 import { liveSse } from '../controllers/sseController.js';
 
 export function registerRoutes(app: Express, _db: PoolClient | null): void {
@@ -28,6 +28,11 @@ export function registerRoutes(app: Express, _db: PoolClient | null): void {
 
   app.get('/knowledge/articles', optionalAuthenticate, asyncHandler(knowledge.list.bind(knowledge)));
   app.get('/knowledge/articles/:id', optionalAuthenticate, asyncHandler(knowledge.getById.bind(knowledge)));
+  app.get(
+    '/knowledge/articles/:id/images/:filename',
+    optionalAuthenticate,
+    asyncHandler(knowledge.serveBodyImage.bind(knowledge)),
+  );
 
   const api = Router();
   api.use(authenticate);
@@ -66,6 +71,12 @@ export function registerRoutes(app: Express, _db: PoolClient | null): void {
   api.post('/knowledge/articles', authorize('Admin'), asyncHandler(knowledge.create.bind(knowledge)));
   api.patch('/knowledge/articles/:id', authorize('Admin'), asyncHandler(knowledge.update.bind(knowledge)));
   api.delete('/knowledge/articles/:id', authorize('Admin'), asyncHandler(knowledge.delete.bind(knowledge)));
+  api.post(
+    '/knowledge/articles/:id/body-images',
+    authorize('Admin'),
+    uploadKnowledgeImageMemory(),
+    asyncHandler(knowledge.uploadBodyImage.bind(knowledge)),
+  );
 
   api.get('/admin/users', authorize('Admin'), asyncHandler(admin.listUsers.bind(admin)));
   api.post('/admin/users', authorize('Admin'), asyncHandler(admin.createUser.bind(admin)));

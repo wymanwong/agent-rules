@@ -16,3 +16,11 @@ export function uploadAttachmentsMemory(maxFiles = 15): RequestHandler {
     },
   }).array('attachments', maxFiles);
 }
+
+/** Single image for knowledge article body (field name: image) */
+export function uploadKnowledgeImageMemory(): RequestHandler {
+  return multer({
+    storage: multer.memoryStorage(),
+    limits: { ...limits, files: 1 },
+  }).single('image');
+}

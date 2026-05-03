@@ -29,3 +29,15 @@
 .page-body .container-xl > .my-requests-page {
   margin-top: -0.75rem;
 }
+
+/* Knowledge base rich content */
+.kb-article-body .markdown img {
+  max-width: 100%;
+  height: auto;
+}
+.kb-article-body .markdown pre {
+  overflow-x: auto;
+}
+.kb-article-body .markdown table {
+  width: 100%;
+}

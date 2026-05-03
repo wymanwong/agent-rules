@@ -27,6 +27,9 @@ export async function closePool(): Promise<void> {
 export async function ensurePgSchema(): Promise<void> {
   const p = getPool();
   await p.query(SCHEMA_PG_SQL);
+  await p.query(
+    `ALTER TABLE knowledge_articles ADD COLUMN IF NOT EXISTS body_format TEXT NOT NULL DEFAULT 'markdown'`,
+  );
 }
 
 /** Run SQL with $1,$2 placeholders */

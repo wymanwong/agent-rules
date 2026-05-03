@@ -15,6 +15,7 @@ import { ITQueuePage } from './pages/ITQueuePage';
 import { AdminPage } from './pages/AdminPage';
 import { AdminCatalogListPage } from './pages/admin/AdminCatalogListPage';
 import { AdminCatalogConfigurePage } from './pages/admin/AdminCatalogConfigurePage';
+import { KbArticleEditorPage } from './pages/admin/KbArticleEditorPage';
 
 export default function App() {
   return (
@@ -111,6 +112,22 @@ export default function App() {
               element={
                 <ProtectedRoute roles={['Admin']}>
                   <AdminCatalogConfigurePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="admin/knowledge/new"
+              element={
+                <ProtectedRoute roles={['Admin']}>
+                  <KbArticleEditorPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="admin/knowledge/:id"
+              element={
+                <ProtectedRoute roles={['Admin']}>
+                  <KbArticleEditorPage />
                 </ProtectedRoute>
               }
             />

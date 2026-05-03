@@ -164,6 +164,7 @@ async function main(): Promise<void> {
   await kbRepo.insertArticle(null, {
     title: 'Reset your VPN client',
     body: 'Close the VPN client, restart it, and reconnect using SSO. If issues persist, open an incident.',
+    body_format: 'markdown',
     category: 'Network',
     tags: 'vpn,network',
     is_published: 1,
@@ -173,7 +174,8 @@ async function main(): Promise<void> {
 
   await kbRepo.insertArticle(null, {
     title: 'How to request a new laptop',
-    body: 'Use the service catalog item Request hardware refresh or contact the Helpdesk.',
+    body: 'Use the service catalog item **Request hardware refresh** or contact the Helpdesk.\n\n## Steps\n\n1. Open **Service catalog**.\n2. Choose the hardware item.\n3. Submit the form with your asset tag.',
+    body_format: 'markdown',
     category: 'Hardware',
     tags: 'laptop,hardware',
     is_published: 1,
@@ -183,7 +185,8 @@ async function main(): Promise<void> {
 
   await kbRepo.insertArticle(null, {
     title: 'Welcome to the IT portal',
-    body: 'Browse Knowledge for fixes, open incidents when something breaks, and use the catalog for standard requests.',
+    body: 'Browse **Knowledge** for fixes, open **incidents** when something breaks, and use the **catalog** for standard requests.\n\n> Tip: Use **Share** on any article to email a link or open Microsoft Teams.',
+    body_format: 'markdown',
     category: 'Getting started',
     tags: 'portal,introduction',
     is_published: 1,

@@ -52,6 +52,13 @@ Password for all: `password123`
 - `it.helpdesk@example.com`, `it.network@example.com`, `it.apps@example.com` — IT (per team)  
 - `user@example.com` — EndUser  
 
+## Knowledge base (rich content & sharing)
+
+- **Body format**: Articles store **`body`** plus **`body_format`**: `markdown` (default) or `plain`. The portal renders Markdown with **sanitized HTML** (headings, lists, tables, code blocks, images).
+- **Images**: Admins upload inline images with **`POST /knowledge/articles/:id/body-images`** (multipart field **`image`**). Files are stored under `UPLOADS_DIR/knowledge/:id/`. Published articles serve images at **`GET /knowledge/articles/:id/images/:filename`** (optional JWT; unpublished images require Admin).
+- **Admin UI**: `/admin/knowledge/new` and `/admin/knowledge/:id` for full editor, **Insert image** after save, Markdown cheat sheet in UI copy.
+- **Share (browser)**: Article pages offer **Email** (`mailto:` with subject/body), **Microsoft Teams** (opens Teams chat compose with title + link — user picks channel/recipients in Teams), **Copy link**, and **Save** (article IDs in `localStorage` for quick recall).
+
 ## Notable API behavior
 
 - **Knowledge GET** `/knowledge/articles` and `/knowledge/articles/:id` are public for published articles; optional JWT unlocks unpublished listing for Admin.

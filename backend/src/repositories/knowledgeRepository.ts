@@ -5,6 +5,7 @@ export interface KnowledgeArticleRow {
   id: number;
   title: string;
   body: string;
+  body_format: string;
   category: string | null;
   tags: string | null;
   is_published: number;
@@ -49,10 +50,11 @@ export async function findArticle(db: PoolClient | null, id: number): Promise<Kn
 
 export async function insertArticle(db: PoolClient | null, row: Omit<KnowledgeArticleRow, 'id'>): Promise<number> {
   void db;
+  const fmt = row.body_format || 'markdown';
   const r = await query<{ id: number }>(
-    `INSERT INTO knowledge_articles (title, body, category, tags, is_published, created_at, updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
-    [row.title, row.body, row.category, row.tags, row.is_published, row.created_at, row.updated_at],
+    `INSERT INTO knowledge_articles (title, body, body_format, category, tags, is_published, created_at, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+    [row.title, row.body, fmt, row.category, row.tags, row.is_published, row.created_at, row.updated_at],
   );
   return r.rows[0]!.id;
 }

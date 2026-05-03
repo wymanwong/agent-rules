@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthContext';
-import { KNOWLEDGE_CATEGORY_LABELS } from '../constants/knowledgeCategories';
 import { useLiveEvents } from '../hooks/useLiveEvents';
 
 interface UserRow {
@@ -203,61 +202,29 @@ export function AdminPage() {
                     <td>{a.title}</td>
                     <td>{a.is_published === 1 ? 'yes' : 'no'}</td>
                     <td>
-                      <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => void toggleArticlePublished(a)}>
-                        Toggle
-                      </button>
+                      <div className="btn-list">
+                        <Link to={`/admin/knowledge/${a.id}`} className="btn btn-sm btn-outline-primary">
+                          Edit
+                        </Link>
+                        <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => void toggleArticlePublished(a)}>
+                          Toggle publish
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <h4 className="mb-2">Quick create article</h4>
-          <MiniKbCreate onDone={() => void refreshKb()} />
+          <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
+            <Link to="/admin/knowledge/new" className="btn btn-primary">
+              New knowledge article
+            </Link>
+            <span className="text-secondary small">Rich text uses Markdown; upload images from the editor.</span>
+          </div>
         </>
       )}
     </>
   );
 }
 
-function MiniKbCreate({ onDone }: { onDone: () => void }) {
-  const [title, setTitle] = useState('New article');
-  const [body, setBody] = useState('Body text');
-  const [category, setCategory] = useState<string>(KNOWLEDGE_CATEGORY_LABELS[KNOWLEDGE_CATEGORY_LABELS.length - 1] ?? 'General');
-  return (
-    <div className="row g-2" style={{ maxWidth: 480 }}>
-      <div className="col-12">
-        <label className="form-label">Title</label>
-        <input type="text" className="form-control" value={title} onChange={(e) => setTitle(e.target.value)} />
-      </div>
-      <div className="col-12">
-        <label className="form-label">Category</label>
-        <select className="form-select" value={category} onChange={(e) => setCategory(e.target.value)}>
-          {KNOWLEDGE_CATEGORY_LABELS.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="col-12">
-        <label className="form-label">Body</label>
-        <textarea className="form-control" rows={3} value={body} onChange={(e) => setBody(e.target.value)} />
-      </div>
-      <div className="col-12">
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() =>
-            void api('/knowledge/articles', {
-              method: 'POST',
-              json: { title, body, category, is_published: true },
-            }).then(onDone)
-          }
-        >
-          Create
-        </button>
-      </div>
-    </div>
-  );
-}
