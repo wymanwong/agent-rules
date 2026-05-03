@@ -22,7 +22,7 @@ export function registerRoutes(app: Express, _db: PoolClient | null): void {
   const admin = createAdminController(null);
 
   app.post('/auth/login', asyncHandler(auth.login.bind(auth)));
-  app.get('/auth/me', authenticate, asyncHandler(auth.me.bind(auth)));
+  app.get('/auth/me', optionalAuthenticate, asyncHandler(auth.me.bind(auth)));
 
   app.get('/live/stream', authenticateSse, liveSse);
 

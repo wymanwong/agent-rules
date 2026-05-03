@@ -37,8 +37,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     try {
-      const me = await api<User>('/auth/me');
-      setUser(me);
+      const me = await api<User | null>('/auth/me');
+      if (!me) {
+        setToken(null);
+        setUser(null);
+      } else {
+        setUser(me);
+      }
     } catch {
       setToken(null);
       setUser(null);

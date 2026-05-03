@@ -20,7 +20,10 @@ export function createAuthController(_db: PoolClient | null) {
       res.json({ token: result.token, user: result.user });
     },
     me: async (req: AuthRequest, res: Response): Promise<void> => {
-      if (!req.user) throw new HttpError(401, 'Unauthorized');
+      if (!req.user) {
+        res.json(null);
+        return;
+      }
       const u = await userRepo.findUserById(null, req.user.userId);
       if (!u) throw new HttpError(404, 'User not found');
       const { password_hash: _, ...safe } = u;
