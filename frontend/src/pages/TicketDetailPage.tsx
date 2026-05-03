@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   IconArrowLeft,
   IconCalendar,
@@ -122,10 +122,14 @@ function spacedLabel(value: string): string {
   return value.replace(/([A-Z])/g, ' $1').trim();
 }
 
+export type TicketDetailPrefetch = { ticket_number: string; title: string };
+
 export function TicketDetailPage() {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const prefetch = (location.state as { prefetchTicket?: TicketDetailPrefetch } | null)?.prefetchTicket;
   const [data, setData] = useState<{
     ticket: Ticket;
     catalog_item?: { id: number; name: string | null } | null;
@@ -335,6 +339,35 @@ export function TicketDetailPage() {
   }
 
   if (!data) {
+    if (prefetch?.title) {
+      return (
+        <div className="page">
+          <div className="page-header d-print-none mb-4">
+            <div className="text-secondary small mb-1">
+              <Link to={ticketListBackPath(user?.role)} className="text-reset text-decoration-none">
+                <IconArrowLeft size={16} className="icon icon-inline me-1" aria-hidden />
+                Back to list
+              </Link>
+            </div>
+            <h1 className="page-title mb-2">
+              <span className="text-secondary fw-normal me-2">{prefetch.ticket_number}</span>
+              <span className="d-inline-block">{prefetch.title}</span>
+            </h1>
+            <div className="d-flex align-items-center gap-2 text-secondary small">
+              <span className="spinner-border spinner-border-sm" role="status" aria-hidden />
+              Loading full ticket…
+            </div>
+          </div>
+          <div className="card mb-3">
+            <div className="card-body placeholder-glow">
+              <span className="placeholder col-12 mb-2" />
+              <span className="placeholder col-10 mb-2" />
+              <span className="placeholder col-8" />
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="d-flex justify-content-center py-5">
         <div className="text-secondary d-flex align-items-center gap-2">

@@ -52,8 +52,11 @@ export function ReportIncidentPage() {
         fd.append('attachments', f);
       }
 
-      const res = await apiMultipart<{ ticket: { id: number } }>('/tickets/multipart', fd);
-      navigate(`/tickets/${res.ticket.id}`);
+      const res = await apiMultipart<{ ticket: { id: number; ticket_number: string; title: string } }>('/tickets/multipart', fd);
+      const tk = res.ticket;
+      navigate(`/tickets/${tk.id}`, {
+        state: { prefetchTicket: { ticket_number: tk.ticket_number, title: tk.title } },
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed');
     }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { TicketDetailPrefetch } from './TicketDetailPage';
 import { IconFilter } from '@tabler/icons-react';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthContext';
@@ -180,7 +181,16 @@ export function MyRequestsPage() {
                   </tr>
                 ) : (
                   tickets.map((t) => (
-                    <tr key={t.id} role="button" className="cursor-pointer" onClick={() => navigate(`/tickets/${t.id}`)}>
+                    <tr
+                      key={t.id}
+                      role="button"
+                      className="cursor-pointer"
+                      onClick={() =>
+                        navigate(`/tickets/${t.id}`, {
+                          state: { prefetchTicket: { ticket_number: t.ticket_number, title: t.title } satisfies TicketDetailPrefetch },
+                        })
+                      }
+                    >
                       <td className="text-secondary">{t.ticket_number}</td>
                       <td className="fw-medium">{t.title}</td>
                       <td>{t.type}</td>

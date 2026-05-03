@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { TicketDetailPrefetch } from './TicketDetailPage';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { TicketAssignmentPanel } from '../components/TicketAssignmentPanel';
@@ -109,7 +110,15 @@ export function ITQueuePage() {
           </thead>
           <tbody>
             {tickets.map((t) => (
-              <tr key={t.id} role="button" onClick={() => navigate(`/it/tickets/${t.id}`)}>
+              <tr
+                key={t.id}
+                role="button"
+                onClick={() =>
+                  navigate(`/it/tickets/${t.id}`, {
+                    state: { prefetchTicket: { ticket_number: t.ticket_number, title: t.title } satisfies TicketDetailPrefetch },
+                  })
+                }
+              >
                 <td>{t.ticket_number}</td>
                 <td>{t.title}</td>
                 <td>{t.type}</td>

@@ -185,18 +185,20 @@ export function createTicketController(_db: PoolClient | null) {
 
       const { catalog_service_name: catName, ...ticket } = ticketRow;
 
-      const requester = await userRepo.findUserById(null, ticket.requester_id);
-      const assignee = ticket.assignee_id ? await userRepo.findUserById(null, ticket.assignee_id) : undefined;
-      const team = ticket.team_id ? await teamRepo.findTeamById(null, ticket.team_id) : undefined;
+      const [requester, assignee, team, commentsRaw, history, approvals, attachments] = await Promise.all([
+        userRepo.findUserById(null, ticket.requester_id),
+        ticket.assignee_id ? userRepo.findUserById(null, ticket.assignee_id) : Promise.resolve(undefined),
+        ticket.team_id ? teamRepo.findTeamById(null, ticket.team_id) : Promise.resolve(undefined),
+        commentRepo.listCommentsByTicket(null, id),
+        assignRepo.listByTicket(null, id),
+        approvalRepo.listByTicket(null, id),
+        attachmentRepo.listByTicket(null, id),
+      ]);
 
-      let comments = await commentRepo.listCommentsByTicket(null, id);
+      let comments = commentsRaw;
       if (req.user.role === 'EndUser') {
         comments = comments.filter((c) => c.is_internal === 0);
       }
-
-      const history = await assignRepo.listByTicket(null, id);
-      const approvals = await approvalRepo.listByTicket(null, id);
-      const attachments = await attachmentRepo.listByTicket(null, id);
 
       const strip = (u?: userRepo.UserRow) => {
         if (!u) return undefined;

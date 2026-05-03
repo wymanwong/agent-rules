@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { TicketDetailPrefetch } from './TicketDetailPage';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthContext';
 
@@ -83,7 +84,15 @@ export function PortalHome() {
                   <div>{t.title}</div>
                 </div>
                 <div className="card-footer">
-                  <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => navigate(`/tickets/${t.id}`)}>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-primary"
+                    onClick={() =>
+                      navigate(`/tickets/${t.id}`, {
+                        state: { prefetchTicket: { ticket_number: t.ticket_number, title: t.title } satisfies TicketDetailPrefetch },
+                      })
+                    }
+                  >
                     View
                   </button>
                 </div>

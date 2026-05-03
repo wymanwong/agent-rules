@@ -67,8 +67,14 @@ export function CatalogItemPage() {
         fd.append('attachments', f);
       }
 
-      const res = await apiMultipart<{ ticket: { id: number } }>(`/catalog/items/${id}/requests/multipart`, fd);
-      navigate(`/tickets/${res.ticket.id}`);
+      const res = await apiMultipart<{ ticket: { id: number; ticket_number: string; title: string } }>(
+        `/catalog/items/${id}/requests/multipart`,
+        fd,
+      );
+      const tk = res.ticket;
+      navigate(`/tickets/${tk.id}`, {
+        state: { prefetchTicket: { ticket_number: tk.ticket_number, title: tk.title } },
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed');
     }
