@@ -5,6 +5,9 @@ import * as assignRepo from '../repositories/assignmentHistoryRepository.js';
 import { computeDueAtIso, computePriority, formatTicketNumber } from './prioritySla.js';
 import { canTransition, isValidStatusForType } from './ticketWorkflow.js';
 
+/** Tickets not yet assigned to a team or person (portal / triage inbox). */
+const UNASSIGNED_TRIAGE_SQL = '(team_id IS NULL AND assignee_id IS NULL)';
+
 export function buildListFiltersForRole(user: JwtPayload): Pick<ticketRepo.TicketFilters, 'rbacFragments' | 'rbacParams'> {
   if (user.role === 'Admin') {
     return {};
@@ -18,12 +21,12 @@ export function buildListFiltersForRole(user: JwtPayload): Pick<ticketRepo.Ticke
   const teamId = user.teamId;
   if (teamId != null) {
     return {
-      rbacFragments: ['(team_id = $1 OR assignee_id = $2)'],
+      rbacFragments: [`(team_id = $1 OR assignee_id = $2 OR ${UNASSIGNED_TRIAGE_SQL})`],
       rbacParams: [teamId, user.userId],
     };
   }
   return {
-    rbacFragments: ['assignee_id = $1'],
+    rbacFragments: [`(assignee_id = $1 OR ${UNASSIGNED_TRIAGE_SQL})`],
     rbacParams: [user.userId],
   };
 }
@@ -35,6 +38,8 @@ export function canAccessTicket(_db: PoolClient | null, user: JwtPayload, ticket
   if (user.role === 'IT') {
     if (ticket.assignee_id === user.userId) return true;
     if (user.teamId != null && ticket.team_id === user.teamId) return true;
+    // Unrouted work: visible to any IT user so the queue is not empty for portal-created tickets.
+    if (ticket.team_id == null && ticket.assignee_id == null) return true;
   }
   return false;
 }

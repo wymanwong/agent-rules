@@ -56,7 +56,9 @@ export function ITQueuePage() {
     <>
       <div className="page-header mb-4">
         <h2 className="page-title">IT Queue</h2>
-        <p className="text-secondary small mb-0">Updates automatically when tickets change.</p>
+        <p className="text-secondary small mb-0">
+          Shows tickets for your team, assigned to you, and <strong>unassigned</strong> items (no team / no assignee) so portal submissions appear here. Updates automatically when tickets change.
+        </p>
       </div>
       <div className="row g-2 mb-3">
         <div className="col-md-3">
