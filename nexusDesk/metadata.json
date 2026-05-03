@@ -1,0 +1,8 @@
+{
+  "name": "NexusDesk - AI-Powered IT Service Desk",
+  "description": "A modern, high-performance IT Service Desk platform featuring job dispatch, automated queue management, and AI-assisted ticket resolution inspired by osTicket but built for the modern web.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
