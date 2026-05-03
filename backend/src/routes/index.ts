@@ -10,6 +10,7 @@ import { createTicketController } from '../controllers/ticketController.js';
 import { createCatalogController } from '../controllers/catalogController.js';
 import { createKnowledgeController } from '../controllers/knowledgeController.js';
 import { createAdminController } from '../controllers/adminController.js';
+import { createItStaffController } from '../controllers/itStaffController.js';
 import { uploadAttachmentsMemory } from '../middleware/upload.js';
 import { liveSse } from '../controllers/sseController.js';
 
@@ -20,6 +21,7 @@ export function registerRoutes(app: Express, _db: PoolClient | null): void {
   const catalog = createCatalogController(null);
   const knowledge = createKnowledgeController(null);
   const admin = createAdminController(null);
+  const itStaff = createItStaffController(null);
 
   app.post('/auth/login', asyncHandler(auth.login.bind(auth)));
   app.get('/auth/me', authenticate, asyncHandler(auth.me.bind(auth)));
@@ -34,6 +36,7 @@ export function registerRoutes(app: Express, _db: PoolClient | null): void {
 
   api.post('/tickets', asyncHandler(tickets.create.bind(tickets)));
   api.post('/tickets/multipart', uploadAttachmentsMemory(), asyncHandler(tickets.createMultipart.bind(tickets)));
+  api.get('/it/staff', authorize('IT', 'Admin'), asyncHandler(itStaff.list.bind(itStaff)));
   api.get('/tickets', asyncHandler(tickets.list.bind(tickets)));
   api.get('/tickets/:ticketId/attachments/:attachmentId/download', asyncHandler(tickets.downloadAttachment.bind(tickets)));
   api.delete('/tickets/:ticketId/attachments/:attachmentId', asyncHandler(tickets.deleteAttachment.bind(tickets)));

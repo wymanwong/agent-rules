@@ -35,6 +35,7 @@ export function createAdminController(_db: PoolClient | null) {
         updated_at: now,
       });
       emitLive({ type: 'tickets', at: now });
+      emitLive({ type: 'staff', at: now });
       res.status(201).json({ id });
     },
 
@@ -55,6 +56,7 @@ export function createAdminController(_db: PoolClient | null) {
       }
       await userRepo.updateUser(null, id, patch);
       emitLive({ type: 'tickets', at: patch.updated_at! });
+      emitLive({ type: 'staff', at: patch.updated_at! });
       res.json({ ok: true });
     },
 
@@ -62,7 +64,9 @@ export function createAdminController(_db: PoolClient | null) {
       const id = Number(req.params.id);
       if (req.user?.userId === id) throw new HttpError(400, 'Cannot delete self');
       await userRepo.deleteUser(null, id);
-      emitLive({ type: 'tickets', at: new Date().toISOString() });
+      const at = new Date().toISOString();
+      emitLive({ type: 'tickets', at });
+      emitLive({ type: 'staff', at });
       res.json({ ok: true });
     },
 
@@ -82,6 +86,7 @@ export function createAdminController(_db: PoolClient | null) {
         updated_at: now,
       });
       emitLive({ type: 'tickets', at: now });
+      emitLive({ type: 'staff', at: now });
       res.status(201).json({ id });
     },
 
@@ -93,14 +98,18 @@ export function createAdminController(_db: PoolClient | null) {
         ...(b.description !== undefined ? { description: b.description as string | null } : {}),
         updated_at: new Date().toISOString(),
       });
-      emitLive({ type: 'tickets', at: new Date().toISOString() });
+      const at = new Date().toISOString();
+      emitLive({ type: 'tickets', at });
+      emitLive({ type: 'staff', at });
       res.json({ ok: true });
     },
 
     deleteTeam: async (req: AuthRequest, res: Response): Promise<void> => {
       const id = Number(req.params.id);
       await teamRepo.deleteTeam(null, id);
-      emitLive({ type: 'tickets', at: new Date().toISOString() });
+      const at = new Date().toISOString();
+      emitLive({ type: 'tickets', at });
+      emitLive({ type: 'staff', at });
       res.json({ ok: true });
     },
   };
