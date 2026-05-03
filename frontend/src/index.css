@@ -1,0 +1,31 @@
+/* App tweaks on top of Tabler / Bootstrap */
+
+.page-body {
+  min-height: calc(100vh - 8rem);
+}
+
+.table-responsive-stack {
+  overflow-x: auto;
+}
+
+/* Ticket detail – readable description */
+.ticket-description-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Ticket detail – activity timeline line */
+.ticket-comment-thread > .ticket-comment:not(:last-child) {
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--tblr-border-color-translucent);
+}
+
+/* My Requests – Tabler adds margin-top to .page-header inside .page-wrapper; pull title up */
+.my-requests-page > .page-header {
+  margin-top: 0 !important;
+}
+
+.page-body .container-xl > .my-requests-page {
+  margin-top: -0.75rem;
+}
