@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import type { Database } from 'better-sqlite3';
+import type { PoolClient } from 'pg';
 import { env } from '../config/env.js';
 import type { JwtPayload, UserRole } from '../models/types.js';
 import * as userRepo from '../repositories/userRepository.js';
@@ -22,8 +22,12 @@ export function verifyToken(token: string): JwtPayload {
   return decoded;
 }
 
-export async function login(db: Database, email: string, password: string): Promise<{ token: string; user: Omit<userRepo.UserRow, 'password_hash'> } | null> {
-  const user = userRepo.findUserByEmail(db, email);
+export async function login(
+  db: PoolClient | null,
+  email: string,
+  password: string,
+): Promise<{ token: string; user: Omit<userRepo.UserRow, 'password_hash'> } | null> {
+  const user = await userRepo.findUserByEmail(db, email);
   if (!user || !verifyPassword(password, user.password_hash)) return null;
   const token = signToken({
     userId: user.id,

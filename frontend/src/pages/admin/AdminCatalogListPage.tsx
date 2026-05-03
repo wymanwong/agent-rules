@@ -1,7 +1,9 @@
 import { IconEdit, IconPlus } from '@tabler/icons-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../api';
+import { useAuth } from '../../auth/AuthContext';
+import { useLiveEvents } from '../../hooks/useLiveEvents';
 
 export interface CatalogItemDto {
   id: number;
@@ -19,10 +21,11 @@ export interface CatalogItemDto {
 }
 
 export function AdminCatalogListPage() {
+  const { user } = useAuth();
   const [items, setItems] = useState<CatalogItemDto[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  async function load() {
+  const load = useCallback(async () => {
     setError(null);
     try {
       const r = await api<{ items: CatalogItemDto[] }>('/catalog/items');
@@ -30,11 +33,15 @@ export function AdminCatalogListPage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load catalog');
     }
-  }
+  }, []);
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
+
+  useLiveEvents(user?.role === 'Admin', (msg) => {
+    if (msg.type === 'catalog') void load();
+  });
 
   return (
     <>

@@ -1,5 +1,6 @@
-import type { Database } from 'better-sqlite3';
+import type { PoolClient } from 'pg';
 import type { UserRole } from '../models/types.js';
+import { mapRows, query } from '../db/pg.js';
 
 export interface UserRow {
   id: number;
@@ -13,51 +14,68 @@ export interface UserRow {
   updated_at: string;
 }
 
-export function findUserByEmail(db: Database, email: string): UserRow | undefined {
-  return db.prepare('SELECT * FROM users WHERE email = ?').get(email.trim().toLowerCase()) as UserRow | undefined;
+export async function findUserByEmail(db: PoolClient | null, email: string): Promise<UserRow | undefined> {
+  void db;
+  const r = await query<UserRow>('SELECT * FROM users WHERE lower(email) = lower($1)', [email.trim()]);
+  return mapRows(r.rows)[0];
 }
 
-export function findUserById(db: Database, id: number): UserRow | undefined {
-  return db.prepare('SELECT * FROM users WHERE id = ?').get(id) as UserRow | undefined;
+export async function findUserById(db: PoolClient | null, id: number): Promise<UserRow | undefined> {
+  void db;
+  const r = await query<UserRow>('SELECT * FROM users WHERE id = $1', [id]);
+  return mapRows(r.rows)[0];
 }
 
-export function listUsersSafe(db: Database): Omit<UserRow, 'password_hash'>[] {
-  return db
-    .prepare('SELECT id, name, email, department, role, team_id, created_at, updated_at FROM users ORDER BY id')
-    .all() as Omit<UserRow, 'password_hash'>[];
+export async function listUsersSafe(db: PoolClient | null): Promise<Omit<UserRow, 'password_hash'>[]> {
+  void db;
+  const r = await query<Omit<UserRow, 'password_hash'>>(
+    'SELECT id, name, email, department, role, team_id, created_at, updated_at FROM users ORDER BY id',
+  );
+  return mapRows(r.rows as Omit<UserRow, 'password_hash'>[]);
 }
 
-export function listUsers(db: Database): UserRow[] {
-  return db.prepare('SELECT * FROM users ORDER BY id').all() as UserRow[];
+export async function listUsers(db: PoolClient | null): Promise<UserRow[]> {
+  void db;
+  const r = await query<UserRow>('SELECT * FROM users ORDER BY id');
+  return mapRows(r.rows);
 }
 
-export function insertUser(
-  db: Database,
+export async function insertUser(
+  db: PoolClient | null,
   row: Omit<UserRow, 'id'> & { password_hash: string },
-): number {
-  const r = db
-    .prepare(
-      `INSERT INTO users (name, email, department, role, password_hash, team_id, created_at, updated_at)
-       VALUES (@name, @email, @department, @role, @password_hash, @team_id, @created_at, @updated_at)`,
-    )
-    .run({
-      ...row,
-      email: row.email.trim().toLowerCase(),
-    });
-  return Number(r.lastInsertRowid);
+): Promise<number> {
+  void db;
+  const r = await query<{ id: number }>(
+    `INSERT INTO users (name, email, department, role, password_hash, team_id, created_at, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+    [
+      row.name,
+      row.email.trim().toLowerCase(),
+      row.department,
+      row.role,
+      row.password_hash,
+      row.team_id,
+      row.created_at,
+      row.updated_at,
+    ],
+  );
+  return r.rows[0]!.id;
 }
 
-export function updateUser(
-  db: Database,
+export async function updateUser(
+  db: PoolClient | null,
   id: number,
   patch: Partial<Pick<UserRow, 'name' | 'department' | 'role' | 'team_id' | 'updated_at' | 'password_hash'>>,
-): void {
-  const keys = Object.keys(patch).filter((k) => patch[k as keyof typeof patch] !== undefined);
+): Promise<void> {
+  void db;
+  const keys = Object.keys(patch).filter((k) => patch[k as keyof typeof patch] !== undefined) as (keyof typeof patch)[];
   if (keys.length === 0) return;
-  const sets = keys.map((k) => `${k} = @${k}`).join(', ');
-  db.prepare(`UPDATE users SET ${sets} WHERE id = @id`).run({ ...patch, id });
+  const sets = keys.map((k, i) => `${String(k)} = $${i + 2}`).join(', ');
+  const vals = keys.map((k) => patch[k]);
+  await query(`UPDATE users SET ${sets} WHERE id = $1`, [id, ...vals]);
 }
 
-export function deleteUser(db: Database, id: number): void {
-  db.prepare('DELETE FROM users WHERE id = ?').run(id);
+export async function deleteUser(db: PoolClient | null, id: number): Promise<void> {
+  void db;
+  await query('DELETE FROM users WHERE id = $1', [id]);
 }

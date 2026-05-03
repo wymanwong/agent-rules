@@ -1,5 +1,5 @@
 import type { Response } from 'express';
-import type { Database } from 'better-sqlite3';
+import type { PoolClient } from 'pg';
 import fs from 'node:fs';
 import type { AuthRequest } from '../middleware/auth.js';
 import { HttpError } from '../middleware/errorHandler.js';
@@ -19,6 +19,7 @@ import {
 import { persistUploadedFiles, absoluteAttachmentPath, deleteAttachmentSync } from '../services/attachmentService.js';
 import type { Impact, TicketType, Urgency } from '../models/types.js';
 import type { Express } from 'express';
+import { emitLive } from '../live/liveHub.js';
 
 function mapTicketError(e: unknown): never {
   const msg = e instanceof Error ? e.message : String(e);
@@ -39,7 +40,8 @@ function parseMultipartExtra(body: Record<string, string>): Record<string, unkno
   }
 }
 
-export function createTicketController(db: Database) {
+export function createTicketController(_db: PoolClient | null) {
+  void _db;
   return {
     createMultipart: async (req: AuthRequest, res: Response): Promise<void> => {
       if (!req.user) throw new HttpError(401, 'Unauthorized');
@@ -59,13 +61,13 @@ export function createTicketController(db: Database) {
         throw new HttpError(400, 'Invalid type');
       }
 
-      const requester = userRepo.findUserById(db, req.user.userId);
+      const requester = await userRepo.findUserById(null, req.user.userId);
       let ticket_extra_json: string | undefined;
       const extraObj = parseMultipartExtra(body as unknown as Record<string, string>);
       if (extraObj !== undefined) ticket_extra_json = JSON.stringify(extraObj);
 
-      const ticket = createTicket(
-        db,
+      const ticket = await createTicket(
+        null,
         {
           title,
           description,
@@ -84,14 +86,15 @@ export function createTicketController(db: Database) {
         requester?.department ?? null,
       );
 
-      await persistUploadedFiles(db, ticket.id, req.user.userId, files);
+      await persistUploadedFiles(null, ticket.id, req.user.userId, files);
 
       console.info(`Ticket created ${ticket.ticket_number} priority=${ticket.priority}`);
       if (ticket.priority === 'P1') console.warn(`P1 ticket ${ticket.ticket_number}`);
+      emitLive({ type: 'tickets', ticketId: ticket.id, at: new Date().toISOString() });
       res.status(201).json({ ticket });
     },
 
-    create: (req: AuthRequest, res: Response): void => {
+    create: async (req: AuthRequest, res: Response): Promise<void> => {
       if (!req.user) throw new HttpError(401, 'Unauthorized');
       const body = req.body as Record<string, unknown>;
       const type = body.type as TicketType;
@@ -106,9 +109,9 @@ export function createTicketController(db: Database) {
       if (req.user.role === 'EndUser' && type !== 'Incident' && type !== 'ServiceRequest') {
         throw new HttpError(400, 'Invalid type');
       }
-      const requester = userRepo.findUserById(db, req.user.userId);
-      const ticket = createTicket(
-        db,
+      const requester = await userRepo.findUserById(null, req.user.userId);
+      const ticket = await createTicket(
+        null,
         {
           title,
           description,
@@ -133,10 +136,11 @@ export function createTicketController(db: Database) {
       );
       console.info(`Ticket created ${ticket.ticket_number} priority=${ticket.priority}`);
       if (ticket.priority === 'P1') console.warn(`P1 ticket ${ticket.ticket_number}`);
+      emitLive({ type: 'tickets', ticketId: ticket.id, at: new Date().toISOString() });
       res.status(201).json({ ticket });
     },
 
-    list: (req: AuthRequest, res: Response): void => {
+    list: async (req: AuthRequest, res: Response): Promise<void> => {
       if (!req.user) throw new HttpError(401, 'Unauthorized');
       const q = req.query;
       const limit = Math.min(Number(q.limit) || 50, 100);
@@ -159,31 +163,31 @@ export function createTicketController(db: Database) {
         search: q.search as string | undefined,
       };
 
-      const { rows, total } = ticketRepo.listTickets(db, filters, limit, offset);
+      const { rows, total } = await ticketRepo.listTickets(null, filters, limit, offset);
       res.json({ tickets: rows, total, page, limit });
     },
 
-    getById: (req: AuthRequest, res: Response): void => {
+    getById: async (req: AuthRequest, res: Response): Promise<void> => {
       if (!req.user) throw new HttpError(401, 'Unauthorized');
       const id = Number(req.params.id);
-      const ticketRow = ticketRepo.getTicketByIdWithCatalog(db, id);
+      const ticketRow = await ticketRepo.getTicketByIdWithCatalog(null, id);
       if (!ticketRow) throw new HttpError(404, 'Ticket not found');
-      if (!canAccessTicket(db, req.user, ticketRow)) throw new HttpError(403, 'Forbidden');
+      if (!canAccessTicket(null, req.user, ticketRow)) throw new HttpError(403, 'Forbidden');
 
       const { catalog_service_name: catName, ...ticket } = ticketRow;
 
-      const requester = userRepo.findUserById(db, ticket.requester_id);
-      const assignee = ticket.assignee_id ? userRepo.findUserById(db, ticket.assignee_id) : undefined;
-      const team = ticket.team_id ? teamRepo.findTeamById(db, ticket.team_id) : undefined;
+      const requester = await userRepo.findUserById(null, ticket.requester_id);
+      const assignee = ticket.assignee_id ? await userRepo.findUserById(null, ticket.assignee_id) : undefined;
+      const team = ticket.team_id ? await teamRepo.findTeamById(null, ticket.team_id) : undefined;
 
-      let comments = commentRepo.listCommentsByTicket(db, id);
+      let comments = await commentRepo.listCommentsByTicket(null, id);
       if (req.user.role === 'EndUser') {
         comments = comments.filter((c) => c.is_internal === 0);
       }
 
-      const history = assignRepo.listByTicket(db, id);
-      const approvals = approvalRepo.listByTicket(db, id);
-      const attachments = attachmentRepo.listByTicket(db, id);
+      const history = await assignRepo.listByTicket(null, id);
+      const approvals = await approvalRepo.listByTicket(null, id);
+      const attachments = await attachmentRepo.listByTicket(null, id);
 
       const strip = (u?: userRepo.UserRow) => {
         if (!u) return undefined;
@@ -192,9 +196,7 @@ export function createTicketController(db: Database) {
       };
 
       const catalog_item =
-        ticket.catalog_item_id != null
-          ? { id: ticket.catalog_item_id, name: catName ?? null }
-          : null;
+        ticket.catalog_item_id != null ? { id: ticket.catalog_item_id, name: catName ?? null } : null;
 
       res.json({
         ticket,
@@ -209,15 +211,15 @@ export function createTicketController(db: Database) {
       });
     },
 
-    downloadAttachment: (req: AuthRequest, res: Response): void => {
+    downloadAttachment: async (req: AuthRequest, res: Response): Promise<void> => {
       if (!req.user) throw new HttpError(401, 'Unauthorized');
       const ticketId = Number(req.params.ticketId);
       const attachmentId = Number(req.params.attachmentId);
-      const ticket = ticketRepo.getTicketById(db, ticketId);
+      const ticket = await ticketRepo.getTicketById(null, ticketId);
       if (!ticket) throw new HttpError(404, 'Ticket not found');
-      if (!canAccessTicket(db, req.user, ticket)) throw new HttpError(403, 'Forbidden');
+      if (!canAccessTicket(null, req.user, ticket)) throw new HttpError(403, 'Forbidden');
 
-      const att = attachmentRepo.findById(db, attachmentId);
+      const att = await attachmentRepo.findById(null, attachmentId);
       if (!att || att.ticket_id !== ticketId) throw new HttpError(404, 'Attachment not found');
 
       const abs = absoluteAttachmentPath(att.stored_relative_path);
@@ -235,55 +237,59 @@ export function createTicketController(db: Database) {
     addAttachmentsMultipart: async (req: AuthRequest, res: Response): Promise<void> => {
       if (!req.user) throw new HttpError(401, 'Unauthorized');
       const ticketId = Number(req.params.id);
-      const ticket = ticketRepo.getTicketById(db, ticketId);
+      const ticket = await ticketRepo.getTicketById(null, ticketId);
       if (!ticket) throw new HttpError(404, 'Ticket not found');
-      if (!canAccessTicket(db, req.user, ticket)) throw new HttpError(403, 'Forbidden');
+      if (!canAccessTicket(null, req.user, ticket)) throw new HttpError(403, 'Forbidden');
 
       const files = (req.files as Express.Multer.File[] | undefined) ?? [];
       if (files.length === 0) throw new HttpError(400, 'No files uploaded');
 
-      await persistUploadedFiles(db, ticketId, req.user.userId, files);
-      const attachments = attachmentRepo.listByTicket(db, ticketId);
+      await persistUploadedFiles(null, ticketId, req.user.userId, files);
+      const attachments = await attachmentRepo.listByTicket(null, ticketId);
+      emitLive({ type: 'ticket', ticketId, at: new Date().toISOString() });
       res.status(201).json({ attachments });
     },
 
-    deleteAttachment: (req: AuthRequest, res: Response): void => {
+    deleteAttachment: async (req: AuthRequest, res: Response): Promise<void> => {
       if (!req.user) throw new HttpError(401, 'Unauthorized');
       const ticketId = Number(req.params.ticketId);
       const attachmentId = Number(req.params.attachmentId);
-      const ticket = ticketRepo.getTicketById(db, ticketId);
+      const ticket = await ticketRepo.getTicketById(null, ticketId);
       if (!ticket) throw new HttpError(404, 'Ticket not found');
-      if (!canAccessTicket(db, req.user, ticket)) throw new HttpError(403, 'Forbidden');
+      if (!canAccessTicket(null, req.user, ticket)) throw new HttpError(403, 'Forbidden');
 
-      const att = attachmentRepo.findById(db, attachmentId);
+      const att = await attachmentRepo.findById(null, attachmentId);
       if (!att || att.ticket_id !== ticketId) throw new HttpError(404, 'Attachment not found');
 
       if (req.user.role === 'EndUser') {
         if (ticket.requester_id !== req.user.userId) throw new HttpError(403, 'Forbidden');
       }
 
-      const removed = deleteAttachmentSync(db, attachmentId);
+      const removed = await deleteAttachmentSync(null, attachmentId);
       if (!removed) throw new HttpError(404, 'Attachment not found');
+      emitLive({ type: 'ticket', ticketId, at: new Date().toISOString() });
       res.json({ ok: true });
     },
 
-    patch: (req: AuthRequest, res: Response): void => {
+    patch: async (req: AuthRequest, res: Response): Promise<void> => {
       if (!req.user) throw new HttpError(401, 'Unauthorized');
       const id = Number(req.params.id);
       try {
-        const ticket = patchTicket(db, id, req.body as Parameters<typeof patchTicket>[2], req.user);
+        const ticket = await patchTicket(null, id, req.body as Parameters<typeof patchTicket>[2], req.user);
+        emitLive({ type: 'ticket', ticketId: id, at: new Date().toISOString() });
+        emitLive({ type: 'tickets', ticketId: id, at: new Date().toISOString() });
         res.json({ ticket });
       } catch (e) {
         mapTicketError(e);
       }
     },
 
-    addComment: (req: AuthRequest, res: Response): void => {
+    addComment: async (req: AuthRequest, res: Response): Promise<void> => {
       if (!req.user) throw new HttpError(401, 'Unauthorized');
       const id = Number(req.params.id);
-      const ticket = ticketRepo.getTicketById(db, id);
+      const ticket = await ticketRepo.getTicketById(null, id);
       if (!ticket) throw new HttpError(404, 'Ticket not found');
-      if (!canAccessTicket(db, req.user, ticket)) throw new HttpError(403, 'Forbidden');
+      if (!canAccessTicket(null, req.user, ticket)) throw new HttpError(403, 'Forbidden');
 
       const body = req.body as { body?: string; is_internal?: boolean };
       if (!body.body?.trim()) throw new HttpError(400, 'body required');
@@ -293,33 +299,34 @@ export function createTicketController(db: Database) {
         isInternal = 0;
       }
 
-      const cid = commentRepo.insertComment(db, {
+      const cid = await commentRepo.insertComment(null, {
         ticket_id: id,
         author_id: req.user.userId,
         is_internal: isInternal,
         body: body.body.trim(),
         created_at: new Date().toISOString(),
       });
+      emitLive({ type: 'ticket', ticketId: id, at: new Date().toISOString() });
       res.status(201).json({ id: cid });
     },
 
-    listApprovals: (req: AuthRequest, res: Response): void => {
+    listApprovals: async (req: AuthRequest, res: Response): Promise<void> => {
       if (!req.user) throw new HttpError(401, 'Unauthorized');
       const id = Number(req.params.id);
-      const ticket = ticketRepo.getTicketById(db, id);
+      const ticket = await ticketRepo.getTicketById(null, id);
       if (!ticket) throw new HttpError(404, 'Ticket not found');
-      if (!canAccessTicket(db, req.user, ticket)) throw new HttpError(403, 'Forbidden');
-      res.json({ approvals: approvalRepo.listByTicket(db, id) });
+      if (!canAccessTicket(null, req.user, ticket)) throw new HttpError(403, 'Forbidden');
+      res.json({ approvals: await approvalRepo.listByTicket(null, id) });
     },
 
-    approvalDecision: (req: AuthRequest, res: Response): void => {
+    approvalDecision: async (req: AuthRequest, res: Response): Promise<void> => {
       if (!req.user) throw new HttpError(401, 'Unauthorized');
       const ticketId = Number(req.params.id);
       const approvalId = Number(req.params.approvalId);
-      const ticket = ticketRepo.getTicketById(db, ticketId);
+      const ticket = await ticketRepo.getTicketById(null, ticketId);
       if (!ticket) throw new HttpError(404, 'Ticket not found');
 
-      const appr = approvalRepo.findById(db, approvalId);
+      const appr = await approvalRepo.findById(null, approvalId);
       if (!appr || appr.ticket_id !== ticketId) throw new HttpError(404, 'Approval not found');
 
       const isApprover = req.user.userId === appr.approver_user_id;
@@ -332,18 +339,20 @@ export function createTicketController(db: Database) {
       }
 
       const now = new Date().toISOString();
-      approvalRepo.updateApproval(db, approvalId, {
+      await approvalRepo.updateApproval(null, approvalId, {
         status,
         comment: body.comment ?? null,
         decided_at: now,
       });
 
       if (status === 'Rejected') {
-        ticketRepo.patchTicket(db, ticketId, { status: 'Closed', updated_at: now });
-      } else if (approvalRepo.allApprovedForTicket(db, ticketId)) {
-        ticketRepo.patchTicket(db, ticketId, { status: 'Approved', updated_at: now });
+        await ticketRepo.patchTicket(null, ticketId, { status: 'Closed', updated_at: now });
+      } else if (await approvalRepo.allApprovedForTicket(null, ticketId)) {
+        await ticketRepo.patchTicket(null, ticketId, { status: 'Approved', updated_at: now });
       }
 
+      emitLive({ type: 'ticket', ticketId, at: now });
+      emitLive({ type: 'tickets', ticketId, at: now });
       res.json({ ok: true });
     },
   };

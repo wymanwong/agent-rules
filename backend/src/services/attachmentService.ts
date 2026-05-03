@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import type { Database } from 'better-sqlite3';
+import type { PoolClient } from 'pg';
 import type { Express } from 'express';
 import { resolvedUploadsDir } from '../config/env.js';
 import * as attachmentRepo from '../repositories/attachmentRepository.js';
@@ -13,7 +13,7 @@ function sanitizeOriginal(name: string): string {
 }
 
 export async function persistUploadedFiles(
-  db: Database,
+  db: PoolClient | null,
   ticketId: number,
   uploadedByUserId: number,
   files: Express.Multer.File[],
@@ -28,7 +28,7 @@ export async function persistUploadedFiles(
     const absPath = path.join(baseDir, storedName);
     await fs.writeFile(absPath, file.buffer);
     const relPath = path.posix.join('tickets', String(ticketId), storedName);
-    attachmentRepo.insertAttachment(db, {
+    await attachmentRepo.insertAttachment(db, {
       ticket_id: ticketId,
       uploaded_by_user_id: uploadedByUserId,
       original_filename: file.originalname,
@@ -44,8 +44,8 @@ export function absoluteAttachmentPath(storedRelativePath: string): string {
   return path.join(resolvedUploadsDir(), storedRelativePath.replace(/\//g, path.sep));
 }
 
-export function deleteAttachmentSync(db: Database, attachmentId: number): boolean {
-  const row = attachmentRepo.findById(db, attachmentId);
+export async function deleteAttachmentSync(db: PoolClient | null, attachmentId: number): Promise<boolean> {
+  const row = await attachmentRepo.findById(db, attachmentId);
   if (!row) return false;
   const abs = absoluteAttachmentPath(row.stored_relative_path);
   try {
@@ -53,6 +53,6 @@ export function deleteAttachmentSync(db: Database, attachmentId: number): boolea
   } catch {
     /* ignore missing file */
   }
-  attachmentRepo.deleteAttachment(db, attachmentId);
+  await attachmentRepo.deleteAttachment(db, attachmentId);
   return true;
 }

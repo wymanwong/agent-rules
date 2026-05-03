@@ -1,4 +1,5 @@
-import type { Database } from 'better-sqlite3';
+import type { PoolClient } from 'pg';
+import { mapRows, query } from '../db/pg.js';
 import type { TicketType } from '../models/types.js';
 
 export interface TicketRow {
@@ -40,61 +41,58 @@ export interface TicketFilters {
   createdFrom?: string;
   createdTo?: string;
   search?: string;
-  /** Extra WHERE fragments with placeholders (e.g. "(team_id = ? OR assignee_id = ?)") */
   rbacFragments?: string[];
   rbacParams?: unknown[];
 }
 
-export function insertTicket(
-  db: Database,
+export async function insertTicket(
+  db: PoolClient | null,
   row: Omit<TicketRow, 'id' | 'ticket_number'> & { ticket_number?: string },
-): number {
+): Promise<number> {
+  void db;
   const tempNum =
     row.ticket_number ?? `TEMP-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
-  const r = db
-    .prepare(
-      `INSERT INTO tickets (
+  const r = await query<{ id: number }>(
+    `INSERT INTO tickets (
         ticket_number, title, description, type, impact, urgency, priority, status,
         category, subcategory, requester_id, team_id, assignee_id, department,
         source, channel, ticket_extra_json, catalog_item_id, created_at, updated_at, due_at
-      ) VALUES (
-        @ticket_number, @title, @description, @type, @impact, @urgency, @priority, @status,
-        @category, @subcategory, @requester_id, @team_id, @assignee_id, @department,
-        @source, @channel, @ticket_extra_json, @catalog_item_id, @created_at, @updated_at, @due_at
-      )`,
-    )
-    .run({
-      ticket_number: tempNum,
-      title: row.title,
-      description: row.description,
-      type: row.type,
-      impact: row.impact,
-      urgency: row.urgency,
-      priority: row.priority,
-      status: row.status,
-      category: row.category ?? null,
-      subcategory: row.subcategory ?? null,
-      requester_id: row.requester_id,
-      team_id: row.team_id ?? null,
-      assignee_id: row.assignee_id ?? null,
-      department: row.department ?? null,
-      source: row.source,
-      channel: row.channel ?? null,
-      ticket_extra_json: row.ticket_extra_json ?? null,
-      catalog_item_id: row.catalog_item_id ?? null,
-      created_at: row.created_at,
-      updated_at: row.updated_at,
-      due_at: row.due_at ?? null,
-    });
-  return Number(r.lastInsertRowid);
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+      RETURNING id`,
+    [
+      tempNum,
+      row.title,
+      row.description,
+      row.type,
+      row.impact,
+      row.urgency,
+      row.priority,
+      row.status,
+      row.category ?? null,
+      row.subcategory ?? null,
+      row.requester_id,
+      row.team_id ?? null,
+      row.assignee_id ?? null,
+      row.department ?? null,
+      row.source,
+      row.channel ?? null,
+      row.ticket_extra_json ?? null,
+      row.catalog_item_id ?? null,
+      row.created_at,
+      row.updated_at,
+      row.due_at ?? null,
+    ],
+  );
+  return r.rows[0]!.id;
 }
 
-export function updateTicketNumber(db: Database, id: number, ticketNumber: string): void {
-  db.prepare('UPDATE tickets SET ticket_number = ?, updated_at = updated_at WHERE id = ?').run(ticketNumber, id);
+export async function updateTicketNumber(db: PoolClient | null, id: number, ticketNumber: string): Promise<void> {
+  void db;
+  await query('UPDATE tickets SET ticket_number = $1 WHERE id = $2', [ticketNumber, id]);
 }
 
-export function patchTicket(
-  db: Database,
+export async function patchTicket(
+  db: PoolClient | null,
   id: number,
   patch: Partial<
     Pick<
@@ -113,41 +111,49 @@ export function patchTicket(
       | 'updated_at'
     >
   >,
-): void {
-  const keys = Object.keys(patch).filter((k) => patch[k as keyof typeof patch] !== undefined);
+): Promise<void> {
+  void db;
+  const keys = Object.keys(patch).filter((k) => patch[k as keyof typeof patch] !== undefined) as (keyof typeof patch)[];
   if (keys.length === 0) return;
-  const sets = keys.map((k) => `${k} = @${k}`).join(', ');
-  db.prepare(`UPDATE tickets SET ${sets} WHERE id = @id`).run({ ...patch, id });
+  const sets = keys.map((k, i) => `${String(k)} = $${i + 2}`).join(', ');
+  const vals = keys.map((k) => patch[k]);
+  await query(`UPDATE tickets SET ${sets} WHERE id = $1`, [id, ...vals]);
 }
 
-export function getTicketById(db: Database, id: number): TicketRow | undefined {
-  return db.prepare('SELECT * FROM tickets WHERE id = ?').get(id) as TicketRow | undefined;
+export async function getTicketById(db: PoolClient | null, id: number): Promise<TicketRow | undefined> {
+  void db;
+  const r = await query<TicketRow>('SELECT * FROM tickets WHERE id = $1', [id]);
+  return mapRows(r.rows)[0];
 }
 
-/** Ticket row plus catalog offering name when linked via catalog_item_id */
-export function getTicketByIdWithCatalog(db: Database, id: number): TicketDetailRow | undefined {
-  return db
-    .prepare(
-      `SELECT t.*, sci.name AS catalog_service_name
-       FROM tickets t
-       LEFT JOIN service_catalog_items sci ON sci.id = t.catalog_item_id
-       WHERE t.id = ?`,
-    )
-    .get(id) as TicketDetailRow | undefined;
+export async function getTicketByIdWithCatalog(db: PoolClient | null, id: number): Promise<TicketDetailRow | undefined> {
+  void db;
+  const r = await query<TicketDetailRow>(
+    `SELECT t.*, sci.name AS catalog_service_name
+     FROM tickets t
+     LEFT JOIN service_catalog_items sci ON sci.id = t.catalog_item_id
+     WHERE t.id = $1`,
+    [id],
+  );
+  return mapRows(r.rows)[0];
 }
 
-export function listTickets(
-  db: Database,
+export async function listTickets(
+  db: PoolClient | null,
   filters: TicketFilters,
   limit: number,
   offset: number,
-): { rows: TicketRow[]; total: number } {
+): Promise<{ rows: TicketRow[]; total: number }> {
+  void db;
   const conditions: string[] = [];
   const params: unknown[] = [];
 
-  const add = (sql: string, ...vals: unknown[]) => {
-    conditions.push(sql);
+  const pushCond = (sql: string, ...vals: unknown[]) => {
+    const start = params.length + 1;
+    let n = 0;
+    const frag = sql.replace(/\?/g, () => `$${start + n++}`);
     params.push(...vals);
+    conditions.push(frag);
   };
 
   if (filters.rbacFragments?.length) {
@@ -157,25 +163,29 @@ export function listTickets(
     if (filters.rbacParams?.length) params.push(...filters.rbacParams);
   }
 
-  if (filters.type) add('type = ?', filters.type);
-  if (filters.status) add('status = ?', filters.status);
-  if (filters.priority) add('priority = ?', filters.priority);
-  if (filters.teamId !== undefined) add('team_id = ?', filters.teamId);
-  if (filters.assigneeId !== undefined) add('assignee_id = ?', filters.assigneeId);
-  if (filters.requesterId !== undefined) add('requester_id = ?', filters.requesterId);
-  if (filters.category) add('category = ?', filters.category);
-  if (filters.subcategory) add('subcategory = ?', filters.subcategory);
-  if (filters.createdFrom) add('created_at >= ?', filters.createdFrom);
-  if (filters.createdTo) add('created_at <= ?', filters.createdTo);
+  if (filters.type) pushCond('type = ?', filters.type);
+  if (filters.status) pushCond('status = ?', filters.status);
+  if (filters.priority) pushCond('priority = ?', filters.priority);
+  if (filters.teamId !== undefined) pushCond('team_id = ?', filters.teamId);
+  if (filters.assigneeId !== undefined) pushCond('assignee_id = ?', filters.assigneeId);
+  if (filters.requesterId !== undefined) pushCond('requester_id = ?', filters.requesterId);
+  if (filters.category) pushCond('category = ?', filters.category);
+  if (filters.subcategory) pushCond('subcategory = ?', filters.subcategory);
+  if (filters.createdFrom) pushCond('created_at >= ?', filters.createdFrom);
+  if (filters.createdTo) pushCond('created_at <= ?', filters.createdTo);
   if (filters.search) {
-    add('(title LIKE ? OR description LIKE ? OR ticket_number LIKE ?)', `%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
+    const s = `%${filters.search}%`;
+    pushCond('(title ILIKE ? OR description ILIKE ? OR ticket_number ILIKE ?)', s, s, s);
   }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-  const totalRow = db.prepare(`SELECT COUNT(*) as c FROM tickets ${where}`).get(...params) as { c: number };
-  const rows = db
-    .prepare(`SELECT * FROM tickets ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`)
-    .all(...params, limit, offset) as TicketRow[];
-
-  return { rows, total: totalRow.c };
+  const lim = Math.max(0, Math.min(1000, Math.floor(Number(limit))));
+  const off = Math.max(0, Math.floor(Number(offset)));
+  const totalRow = await query<{ c: string }>(`SELECT COUNT(*)::text as c FROM tickets ${where}`, params);
+  const total = Number(totalRow.rows[0]?.c ?? 0);
+  const rowsR = await query<TicketRow>(
+    `SELECT * FROM tickets ${where} ORDER BY created_at DESC LIMIT ${lim} OFFSET ${off}`,
+    params,
+  );
+  return { rows: mapRows(rowsR.rows), total };
 }

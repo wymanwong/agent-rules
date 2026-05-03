@@ -1,4 +1,5 @@
-import type { Database } from 'better-sqlite3';
+import type { PoolClient } from 'pg';
+import { mapRows, query } from '../db/pg.js';
 
 export interface KnowledgeArticleRow {
   id: number;
@@ -11,48 +12,61 @@ export interface KnowledgeArticleRow {
   updated_at: string;
 }
 
-export function listArticles(
-  db: Database,
+export async function listArticles(
+  db: PoolClient | null,
   opts: { publishedOnly?: boolean; category?: string; search?: string },
-): KnowledgeArticleRow[] {
+): Promise<KnowledgeArticleRow[]> {
+  void db;
   const cond: string[] = [];
   const params: unknown[] = [];
+  let i = 1;
   if (opts.publishedOnly) {
     cond.push('is_published = 1');
   }
   if (opts.category) {
-    cond.push('category = ?');
+    cond.push(`category = $${i++}`);
     params.push(opts.category);
   }
   if (opts.search) {
-    cond.push('(title LIKE ? OR body LIKE ?)');
-    params.push(`%${opts.search}%`, `%${opts.search}%`);
+    cond.push(`(title ILIKE $${i} OR body ILIKE $${i + 1})`);
+    const s = `%${opts.search}%`;
+    params.push(s, s);
+    i += 2;
   }
   const where = cond.length ? `WHERE ${cond.join(' AND ')}` : '';
-  return db.prepare(`SELECT * FROM knowledge_articles ${where} ORDER BY updated_at DESC`).all(...params) as KnowledgeArticleRow[];
+  const r = await query<KnowledgeArticleRow>(
+    `SELECT * FROM knowledge_articles ${where} ORDER BY updated_at DESC`,
+    params,
+  );
+  return mapRows(r.rows);
 }
 
-export function findArticle(db: Database, id: number): KnowledgeArticleRow | undefined {
-  return db.prepare('SELECT * FROM knowledge_articles WHERE id = ?').get(id) as KnowledgeArticleRow | undefined;
+export async function findArticle(db: PoolClient | null, id: number): Promise<KnowledgeArticleRow | undefined> {
+  void db;
+  const r = await query<KnowledgeArticleRow>('SELECT * FROM knowledge_articles WHERE id = $1', [id]);
+  return mapRows(r.rows)[0];
 }
 
-export function insertArticle(db: Database, row: Omit<KnowledgeArticleRow, 'id'>): number {
-  const r = db
-    .prepare(
-      `INSERT INTO knowledge_articles (title, body, category, tags, is_published, created_at, updated_at)
-       VALUES (@title, @body, @category, @tags, @is_published, @created_at, @updated_at)`,
-    )
-    .run(row);
-  return Number(r.lastInsertRowid);
+export async function insertArticle(db: PoolClient | null, row: Omit<KnowledgeArticleRow, 'id'>): Promise<number> {
+  void db;
+  const r = await query<{ id: number }>(
+    `INSERT INTO knowledge_articles (title, body, category, tags, is_published, created_at, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+    [row.title, row.body, row.category, row.tags, row.is_published, row.created_at, row.updated_at],
+  );
+  return r.rows[0]!.id;
 }
 
-export function updateArticle(db: Database, id: number, patch: Partial<Omit<KnowledgeArticleRow, 'id'>>): void {
-  const keys = Object.keys(patch).filter((k) => patch[k as keyof typeof patch] !== undefined);
+export async function updateArticle(db: PoolClient | null, id: number, patch: Partial<Omit<KnowledgeArticleRow, 'id'>>): Promise<void> {
+  void db;
+  const keys = Object.keys(patch).filter((k) => patch[k as keyof typeof patch] !== undefined) as (keyof typeof patch)[];
   if (keys.length === 0) return;
-  const sets = keys.map((k) => `${k} = @${k}`).join(', ');
-  db.prepare(`UPDATE knowledge_articles SET ${sets} WHERE id = @id`).run({ ...patch, id });
+  const sets = keys.map((k, i) => `${String(k)} = $${i + 2}`).join(', ');
+  const vals = keys.map((k) => patch[k]);
+  await query(`UPDATE knowledge_articles SET ${sets} WHERE id = $1`, [id, ...vals]);
 }
 
-export function deleteArticle(db: Database, id: number): void {
-  db.prepare('DELETE FROM knowledge_articles WHERE id = ?').run(id);
+export async function deleteArticle(db: PoolClient | null, id: number): Promise<void> {
+  void db;
+  await query('DELETE FROM knowledge_articles WHERE id = $1', [id]);
 }

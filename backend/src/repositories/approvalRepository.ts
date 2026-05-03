@@ -1,4 +1,5 @@
-import type { Database } from 'better-sqlite3';
+import type { PoolClient } from 'pg';
+import { mapRows, query } from '../db/pg.js';
 
 export interface ApprovalRow {
   id: number;
@@ -10,42 +11,50 @@ export interface ApprovalRow {
   decided_at: string | null;
 }
 
-export function insertApproval(db: Database, row: Omit<ApprovalRow, 'id'>): number {
-  const r = db
-    .prepare(
-      `INSERT INTO approvals (ticket_id, approver_user_id, status, comment, created_at, decided_at)
-       VALUES (@ticket_id, @approver_user_id, @status, @comment, @created_at, @decided_at)`,
-    )
-    .run(row);
-  return Number(r.lastInsertRowid);
+export async function insertApproval(db: PoolClient | null, row: Omit<ApprovalRow, 'id'>): Promise<number> {
+  void db;
+  const r = await query<{ id: number }>(
+    `INSERT INTO approvals (ticket_id, approver_user_id, status, comment, created_at, decided_at)
+     VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
+    [row.ticket_id, row.approver_user_id, row.status, row.comment, row.created_at, row.decided_at],
+  );
+  return r.rows[0]!.id;
 }
 
-export function listByTicket(db: Database, ticketId: number): ApprovalRow[] {
-  return db.prepare('SELECT * FROM approvals WHERE ticket_id = ? ORDER BY id').all(ticketId) as ApprovalRow[];
+export async function listByTicket(db: PoolClient | null, ticketId: number): Promise<ApprovalRow[]> {
+  void db;
+  const r = await query<ApprovalRow>('SELECT * FROM approvals WHERE ticket_id = $1 ORDER BY id', [ticketId]);
+  return mapRows(r.rows);
 }
 
-export function findById(db: Database, id: number): ApprovalRow | undefined {
-  return db.prepare('SELECT * FROM approvals WHERE id = ?').get(id) as ApprovalRow | undefined;
+export async function findById(db: PoolClient | null, id: number): Promise<ApprovalRow | undefined> {
+  void db;
+  const r = await query<ApprovalRow>('SELECT * FROM approvals WHERE id = $1', [id]);
+  return mapRows(r.rows)[0];
 }
 
-export function updateApproval(
-  db: Database,
+export async function updateApproval(
+  db: PoolClient | null,
   id: number,
   patch: Partial<Pick<ApprovalRow, 'status' | 'comment' | 'decided_at'>>,
-): void {
-  const keys = Object.keys(patch).filter((k) => patch[k as keyof typeof patch] !== undefined);
+): Promise<void> {
+  void db;
+  const keys = Object.keys(patch).filter((k) => patch[k as keyof typeof patch] !== undefined) as (keyof typeof patch)[];
   if (keys.length === 0) return;
-  const sets = keys.map((k) => `${k} = @${k}`).join(', ');
-  db.prepare(`UPDATE approvals SET ${sets} WHERE id = @id`).run({ ...patch, id });
+  const sets = keys.map((k, i) => `${String(k)} = $${i + 2}`).join(', ');
+  const vals = keys.map((k) => patch[k]);
+  await query(`UPDATE approvals SET ${sets} WHERE id = $1`, [id, ...vals]);
 }
 
-export function allApprovedForTicket(db: Database, ticketId: number): boolean {
-  const rows = db.prepare('SELECT status FROM approvals WHERE ticket_id = ?').all(ticketId) as { status: string }[];
-  if (rows.length === 0) return false;
-  return rows.every((r) => r.status === 'Approved');
+export async function allApprovedForTicket(db: PoolClient | null, ticketId: number): Promise<boolean> {
+  void db;
+  const r = await query<{ status: string }>('SELECT status FROM approvals WHERE ticket_id = $1', [ticketId]);
+  if (r.rows.length === 0) return false;
+  return r.rows.every((row) => row.status === 'Approved');
 }
 
-export function anyRejected(db: Database, ticketId: number): boolean {
-  const rows = db.prepare('SELECT status FROM approvals WHERE ticket_id = ?').all(ticketId) as { status: string }[];
-  return rows.some((r) => r.status === 'Rejected');
+export async function anyRejected(db: PoolClient | null, ticketId: number): Promise<boolean> {
+  void db;
+  const r = await query<{ status: string }>('SELECT status FROM approvals WHERE ticket_id = $1', [ticketId]);
+  return r.rows.some((row) => row.status === 'Rejected');
 }

@@ -1,4 +1,5 @@
-import type { Database } from 'better-sqlite3';
+import type { PoolClient } from 'pg';
+import { mapRows, query } from '../db/pg.js';
 
 export interface CommentRow {
   id: number;
@@ -9,19 +10,18 @@ export interface CommentRow {
   created_at: string;
 }
 
-export function insertComment(
-  db: Database,
-  row: Omit<CommentRow, 'id'>,
-): number {
-  const r = db
-    .prepare(
-      `INSERT INTO comments (ticket_id, author_id, is_internal, body, created_at)
-       VALUES (@ticket_id, @author_id, @is_internal, @body, @created_at)`,
-    )
-    .run(row);
-  return Number(r.lastInsertRowid);
+export async function insertComment(db: PoolClient | null, row: Omit<CommentRow, 'id'>): Promise<number> {
+  void db;
+  const r = await query<{ id: number }>(
+    `INSERT INTO comments (ticket_id, author_id, is_internal, body, created_at)
+     VALUES ($1,$2,$3,$4,$5) RETURNING id`,
+    [row.ticket_id, row.author_id, row.is_internal, row.body, row.created_at],
+  );
+  return r.rows[0]!.id;
 }
 
-export function listCommentsByTicket(db: Database, ticketId: number): CommentRow[] {
-  return db.prepare('SELECT * FROM comments WHERE ticket_id = ? ORDER BY created_at ASC').all(ticketId) as CommentRow[];
+export async function listCommentsByTicket(db: PoolClient | null, ticketId: number): Promise<CommentRow[]> {
+  void db;
+  const r = await query<CommentRow>('SELECT * FROM comments WHERE ticket_id = $1 ORDER BY created_at ASC', [ticketId]);
+  return mapRows(r.rows);
 }

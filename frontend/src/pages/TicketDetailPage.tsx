@@ -20,6 +20,7 @@ import {
 } from '../components/AttachmentPreviewModal';
 import { VoiceToTextButton } from '../components/VoiceToTextButton';
 import { useAuth } from '../auth/AuthContext';
+import { useLiveEvents } from '../hooks/useLiveEvents';
 
 interface Ticket {
   id: number;
@@ -74,9 +75,6 @@ interface AttachmentMeta {
 
 const incidentStatuses = ['New', 'InTriage', 'InProgress', 'PendingUser', 'Pending3rdParty', 'Resolved', 'Closed'];
 const srStatuses = ['New', 'AwaitingApproval', 'Approved', 'InProgress', 'Completed', 'Closed'];
-
-/** How often to refetch ticket detail while this page is open (ms). */
-const TICKET_POLL_MS = 15_000;
 
 /** Solid Tabler `text-bg-*` pairs — avoids unreadable lt+tint combos under `.badge`. */
 function priorityBadgeClass(priority: string): string {
@@ -191,24 +189,15 @@ export function TicketDetailPage() {
     void refresh().catch(() => navigate('/'));
   }, [id, refresh, navigate]);
 
-  useEffect(() => {
+  useLiveEvents(Boolean(id && user), (msg) => {
     if (!id) return;
-    const tick = () => {
-      if (document.visibilityState !== 'visible') return;
-      void refresh({ clearPendingUploads: false }).catch(() => {
-        /* ignore background poll errors */
-      });
-    };
-    const timer = window.setInterval(tick, TICKET_POLL_MS);
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') tick();
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => {
-      window.clearInterval(timer);
-      document.removeEventListener('visibilitychange', onVisible);
-    };
-  }, [id, refresh]);
+    const tid = Number(id);
+    if (msg.type === 'ticket' && msg.ticketId === tid) {
+      void refresh({ clearPendingUploads: false }).catch(() => {});
+    } else if (msg.type === 'tickets') {
+      void refresh({ clearPendingUploads: false }).catch(() => {});
+    }
+  });
 
   async function postComment(e: React.FormEvent) {
     e.preventDefault();

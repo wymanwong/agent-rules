@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IconFilter } from '@tabler/icons-react';
 import { api } from '../api';
+import { useAuth } from '../auth/AuthContext';
+import { useLiveEvents } from '../hooks/useLiveEvents';
 import {
   INCIDENT_CATEGORY_LABELS,
   INCIDENT_SUBCATEGORIES,
@@ -24,6 +26,7 @@ interface TicketRow {
 
 export function MyRequestsPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [tickets, setTickets] = useState<TicketRow[]>([]);
   const [type, setType] = useState('');
   const [status, setStatus] = useState('');
@@ -65,6 +68,10 @@ export function MyRequestsPage() {
       /* keep existing rows on transient failure */
     });
   }, [load]);
+
+  useLiveEvents(Boolean(user), () => {
+    void load().catch(() => {});
+  });
 
   return (
     <div className="my-requests-page">

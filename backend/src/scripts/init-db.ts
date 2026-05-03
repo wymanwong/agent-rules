@@ -1,10 +1,9 @@
 /**
- * Initialize SQLite schema (via getDb) and seed demo data when empty.
+ * Initialize PostgreSQL schema and seed demo data when users table is empty.
+ * Use --force to drop application tables and re-seed (destructive).
  */
-import path from 'node:path';
-import fs from 'node:fs';
 import { env } from '../config/env.js';
-import { getDb, resetDbSingleton } from '../db/index.js';
+import { getPool, ensurePgSchema, query, closePool } from '../db/pg.js';
 import * as teamRepo from '../repositories/teamRepository.js';
 import * as userRepo from '../repositories/userRepository.js';
 import * as catalogRepo from '../repositories/catalogRepository.js';
@@ -12,37 +11,54 @@ import * as kbRepo from '../repositories/knowledgeRepository.js';
 import { hashPassword } from '../services/authService.js';
 import { extraFieldsToFormSchemaJson, normalizeExtraFields } from '../services/catalogFormFields.js';
 
+async function dropAppTables(): Promise<void> {
+  await query(`
+    DROP TABLE IF EXISTS ticket_attachments CASCADE;
+    DROP TABLE IF EXISTS comments CASCADE;
+    DROP TABLE IF EXISTS assignment_history CASCADE;
+    DROP TABLE IF EXISTS approvals CASCADE;
+    DROP TABLE IF EXISTS tickets CASCADE;
+    DROP TABLE IF EXISTS knowledge_articles CASCADE;
+    DROP TABLE IF EXISTS service_catalog_items CASCADE;
+    DROP TABLE IF EXISTS users CASCADE;
+    DROP TABLE IF EXISTS teams CASCADE;
+  `);
+}
+
 async function main(): Promise<void> {
   const force = process.argv.includes('--force');
-  const resolved = path.resolve(process.cwd(), env.dbPath);
-  if (force && fs.existsSync(resolved)) {
-    fs.unlinkSync(resolved);
-    resetDbSingleton();
+  getPool();
+
+  if (force) {
+    await dropAppTables();
   }
 
-  const db = getDb();
-  const existingUsers = db.prepare('SELECT COUNT(*) as c FROM users').get() as { c: number };
-  if (existingUsers.c > 0 && !force) {
+  await ensurePgSchema();
+
+  const countRow = await query<{ c: string }>('SELECT COUNT(*)::text as c FROM users');
+  const existingUsers = Number(countRow.rows[0]?.c ?? 0);
+  if (existingUsers > 0 && !force) {
     console.info('Database already seeded; use --force to reset.');
+    await closePool();
     process.exit(0);
     return;
   }
 
   const now = new Date().toISOString();
 
-  const helpdeskId = teamRepo.insertTeam(db, {
+  const helpdeskId = await teamRepo.insertTeam(null, {
     name: 'Helpdesk',
     description: 'Tier 1 support',
     created_at: now,
     updated_at: now,
   });
-  const netId = teamRepo.insertTeam(db, {
+  const netId = await teamRepo.insertTeam(null, {
     name: 'Network',
     description: 'Network operations',
     created_at: now,
     updated_at: now,
   });
-  const appsId = teamRepo.insertTeam(db, {
+  const appsId = await teamRepo.insertTeam(null, {
     name: 'Applications',
     description: 'Business applications',
     created_at: now,
@@ -51,7 +67,7 @@ async function main(): Promise<void> {
 
   const pwd = await hashPassword('password123');
 
-  userRepo.insertUser(db, {
+  await userRepo.insertUser(null, {
     name: 'System Admin',
     email: 'admin@example.com',
     department: 'IT',
@@ -62,7 +78,7 @@ async function main(): Promise<void> {
     updated_at: now,
   });
 
-  userRepo.insertUser(db, {
+  await userRepo.insertUser(null, {
     name: 'Helpdesk Analyst',
     email: 'it.helpdesk@example.com',
     department: 'IT',
@@ -73,7 +89,7 @@ async function main(): Promise<void> {
     updated_at: now,
   });
 
-  userRepo.insertUser(db, {
+  await userRepo.insertUser(null, {
     name: 'Network Engineer',
     email: 'it.network@example.com',
     department: 'IT',
@@ -84,7 +100,7 @@ async function main(): Promise<void> {
     updated_at: now,
   });
 
-  userRepo.insertUser(db, {
+  await userRepo.insertUser(null, {
     name: 'Apps Analyst',
     email: 'it.apps@example.com',
     department: 'IT',
@@ -95,7 +111,7 @@ async function main(): Promise<void> {
     updated_at: now,
   });
 
-  userRepo.insertUser(db, {
+  await userRepo.insertUser(null, {
     name: 'Jane EndUser',
     email: 'user@example.com',
     department: 'Finance',
@@ -110,7 +126,7 @@ async function main(): Promise<void> {
     { key: 'softwareName', label: 'Software name', kind: 'short_text' },
     { key: 'businessReason', label: 'Business reason', kind: 'paragraph' },
   ]);
-  catalogRepo.insertItem(db, {
+  await catalogRepo.insertItem(null, {
     name: 'Request software installation',
     description: 'Standard request to install approved corporate software.',
     type: 'ServiceRequest',
@@ -128,7 +144,7 @@ async function main(): Promise<void> {
   });
 
   const seedExtra2 = normalizeExtraFields([{ key: 'system', label: 'Target system', kind: 'short_text' }]);
-  catalogRepo.insertItem(db, {
+  await catalogRepo.insertItem(null, {
     name: 'Request elevated access',
     description: 'Requires manager approval before fulfillment.',
     type: 'ServiceRequest',
@@ -145,7 +161,7 @@ async function main(): Promise<void> {
     updated_at: now,
   });
 
-  kbRepo.insertArticle(db, {
+  await kbRepo.insertArticle(null, {
     title: 'Reset your VPN client',
     body: 'Close the VPN client, restart it, and reconnect using SSO. If issues persist, open an incident.',
     category: 'Network',
@@ -155,7 +171,7 @@ async function main(): Promise<void> {
     updated_at: now,
   });
 
-  kbRepo.insertArticle(db, {
+  await kbRepo.insertArticle(null, {
     title: 'How to request a new laptop',
     body: 'Use the service catalog item Request hardware refresh or contact the Helpdesk.',
     category: 'Hardware',
@@ -165,7 +181,7 @@ async function main(): Promise<void> {
     updated_at: now,
   });
 
-  kbRepo.insertArticle(db, {
+  await kbRepo.insertArticle(null, {
     title: 'Welcome to the IT portal',
     body: 'Browse Knowledge for fixes, open incidents when something breaks, and use the catalog for standard requests.',
     category: 'Getting started',
@@ -175,13 +191,15 @@ async function main(): Promise<void> {
     updated_at: now,
   });
 
-  console.info('Database initialized at', resolved);
+  console.info('PostgreSQL seeded:', env.databaseUrl.replace(/:[^:@]+@/, ':****@'));
   console.info('Demo logins (password: password123):');
   console.info('  admin@example.com (Admin)');
   console.info('  it.helpdesk@example.com (IT / Helpdesk)');
   console.info('  it.network@example.com (IT / Network)');
   console.info('  it.apps@example.com (IT / Applications)');
   console.info('  user@example.com (EndUser)');
+
+  await closePool();
 }
 
 main().catch((e) => {

@@ -1,20 +1,26 @@
-# ITIL-Aligned Helpdesk (SQLite + Node + React + Tabler)
+# ITIL-Aligned Helpdesk (PostgreSQL + Node + React + Tabler)
 
-This workspace includes a demo internal ticketing stack: Express + TypeScript + `better-sqlite3`, and a Vite React portal and IT console styled with **[Tabler](https://github.com/tabler/tabler)** (`@tabler/core`).
+This workspace includes a demo internal ticketing stack: Express + TypeScript + **PostgreSQL** (`pg`), and a Vite React portal and IT console styled with **[Tabler](https://github.com/tabler/tabler)** (`@tabler/core`).
 
 ## Architecture
 
-- **Backend** (`backend/`): Layered layout under `src/` — `config`, `db`, `repositories`, `services`, `controllers`, `routes`, `middleware`. SQLite file from `DB_PATH` (default `./data/helpdesk.db`). JWT auth; RBAC for `EndUser`, `IT`, `Admin`.
+- **Backend** (`backend/`): Layered layout under `src/` — `config`, `db`, `repositories`, `services`, `controllers`, `routes`, `middleware`. Connection string **`DATABASE_URL`**. JWT auth; RBAC for `EndUser`, `IT`, `Admin`.
+- **Live updates**: **Server-Sent Events** at `GET /live/stream` (auth via `Authorization: Bearer` or `?token=` for browser `EventSource`). Emits JSON events: `tickets`, `ticket` (with `ticketId`), `knowledge`, `catalog` when data changes.
 - **Frontend** (`frontend/`): React Router; Tabler CSS/JS (`main.tsx`), Bootstrap 5 markup, `@tabler/icons-react`; `/login` and protected routes. Dev server proxies API paths to port 4000.
 - **Priority & SLA**: `backend/src/services/prioritySla.ts` derives `priority` (P1–P4) from impact × urgency and computes `due_at` (P1 +4h, P2 +8h, P3 +3d, P4 +5d).
 - **Workflow**: `backend/src/services/ticketWorkflow.ts` validates incident vs service-request statuses and transitions.
 
 ## Setup
 
+1. Install and run **PostgreSQL** and create a database (e.g. `helpdesk`).
+2. Configure `DATABASE_URL` in `backend/.env` (see `backend/.env.example`).
+
 ```bash
 cd backend && cp .env.example .env && npm install && npm run db:init -- --force
 cd ../frontend && npm install
 ```
+
+`db:init` creates tables if needed and seeds demo users, catalog, and knowledge articles. Use `--force` to drop app tables and re-seed (destructive).
 
 ## Attachments & voice
 

@@ -1,15 +1,17 @@
 import type { Response } from 'express';
-import type { Database } from 'better-sqlite3';
+import type { PoolClient } from 'pg';
 import type { AuthRequest } from '../middleware/auth.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import * as kbRepo from '../repositories/knowledgeRepository.js';
+import { emitLive } from '../live/liveHub.js';
 
-export function createKnowledgeController(db: Database) {
+export function createKnowledgeController(_db: PoolClient | null) {
+  void _db;
   return {
-    list: (req: AuthRequest, res: Response): void => {
+    list: async (req: AuthRequest, res: Response): Promise<void> => {
       const q = req.query;
       const publishedOnly = req.user?.role !== 'Admin' ? true : q.publishedOnly !== 'false';
-      const items = kbRepo.listArticles(db, {
+      const items = await kbRepo.listArticles(null, {
         publishedOnly,
         category: q.category as string | undefined,
         search: q.search as string | undefined,
@@ -17,9 +19,9 @@ export function createKnowledgeController(db: Database) {
       res.json({ articles: items });
     },
 
-    getById: (req: AuthRequest, res: Response): void => {
+    getById: async (req: AuthRequest, res: Response): Promise<void> => {
       const id = Number(req.params.id);
-      const article = kbRepo.findArticle(db, id);
+      const article = await kbRepo.findArticle(null, id);
       if (!article) throw new HttpError(404, 'Article not found');
       if (article.is_published !== 1 && req.user?.role !== 'Admin') {
         throw new HttpError(404, 'Article not found');
@@ -27,10 +29,10 @@ export function createKnowledgeController(db: Database) {
       res.json({ article });
     },
 
-    create: (req: AuthRequest, res: Response): void => {
+    create: async (req: AuthRequest, res: Response): Promise<void> => {
       const b = req.body as Record<string, unknown>;
       const now = new Date().toISOString();
-      const id = kbRepo.insertArticle(db, {
+      const id = await kbRepo.insertArticle(null, {
         title: String(b.title ?? ''),
         body: String(b.body ?? ''),
         category: b.category != null ? String(b.category) : null,
@@ -39,12 +41,13 @@ export function createKnowledgeController(db: Database) {
         created_at: now,
         updated_at: now,
       });
+      emitLive({ type: 'knowledge', at: now });
       res.status(201).json({ id });
     },
 
-    update: (req: AuthRequest, res: Response): void => {
+    update: async (req: AuthRequest, res: Response): Promise<void> => {
       const id = Number(req.params.id);
-      const existing = kbRepo.findArticle(db, id);
+      const existing = await kbRepo.findArticle(null, id);
       if (!existing) throw new HttpError(404, 'Article not found');
       const b = req.body as Record<string, unknown>;
       const patch: Partial<Omit<kbRepo.KnowledgeArticleRow, 'id'>> = {
@@ -55,13 +58,15 @@ export function createKnowledgeController(db: Database) {
       if (b.category !== undefined) patch.category = b.category as string | null;
       if (b.tags !== undefined) patch.tags = b.tags as string | null;
       if (b.is_published !== undefined) patch.is_published = b.is_published ? 1 : 0;
-      kbRepo.updateArticle(db, id, patch);
+      await kbRepo.updateArticle(null, id, patch);
+      emitLive({ type: 'knowledge', at: patch.updated_at! });
       res.json({ ok: true });
     },
 
-    delete: (req: AuthRequest, res: Response): void => {
+    delete: async (req: AuthRequest, res: Response): Promise<void> => {
       const id = Number(req.params.id);
-      kbRepo.deleteArticle(db, id);
+      await kbRepo.deleteArticle(null, id);
+      emitLive({ type: 'knowledge', at: new Date().toISOString() });
       res.json({ ok: true });
     },
   };

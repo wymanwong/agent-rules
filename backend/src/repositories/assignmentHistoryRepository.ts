@@ -1,4 +1,5 @@
-import type { Database } from 'better-sqlite3';
+import type { PoolClient } from 'pg';
+import { mapRows, query } from '../db/pg.js';
 
 export interface AssignmentHistoryRow {
   id: number;
@@ -11,19 +12,29 @@ export interface AssignmentHistoryRow {
   changed_at: string;
 }
 
-export function insertAssignment(
-  db: Database,
-  row: Omit<AssignmentHistoryRow, 'id'>,
-): void {
-  db.prepare(
+export async function insertAssignment(db: PoolClient | null, row: Omit<AssignmentHistoryRow, 'id'>): Promise<void> {
+  void db;
+  await query(
     `INSERT INTO assignment_history (
       ticket_id, from_user_id, to_user_id, from_team_id, to_team_id, changed_by_id, changed_at
-    ) VALUES (@ticket_id, @from_user_id, @to_user_id, @from_team_id, @to_team_id, @changed_by_id, @changed_at)`,
-  ).run(row);
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+    [
+      row.ticket_id,
+      row.from_user_id,
+      row.to_user_id,
+      row.from_team_id,
+      row.to_team_id,
+      row.changed_by_id,
+      row.changed_at,
+    ],
+  );
 }
 
-export function listByTicket(db: Database, ticketId: number): AssignmentHistoryRow[] {
-  return db
-    .prepare('SELECT * FROM assignment_history WHERE ticket_id = ? ORDER BY changed_at ASC')
-    .all(ticketId) as AssignmentHistoryRow[];
+export async function listByTicket(db: PoolClient | null, ticketId: number): Promise<AssignmentHistoryRow[]> {
+  void db;
+  const r = await query<AssignmentHistoryRow>(
+    'SELECT * FROM assignment_history WHERE ticket_id = $1 ORDER BY changed_at ASC',
+    [ticketId],
+  );
+  return mapRows(r.rows);
 }

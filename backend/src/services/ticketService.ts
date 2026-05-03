@@ -1,4 +1,4 @@
-import type { Database } from 'better-sqlite3';
+import type { PoolClient } from 'pg';
 import type { Impact, JwtPayload, Priority, TicketType, Urgency, UserRole } from '../models/types.js';
 import * as ticketRepo from '../repositories/ticketRepository.js';
 import * as assignRepo from '../repositories/assignmentHistoryRepository.js';
@@ -11,24 +11,25 @@ export function buildListFiltersForRole(user: JwtPayload): Pick<ticketRepo.Ticke
   }
   if (user.role === 'EndUser') {
     return {
-      rbacFragments: ['requester_id = ?'],
+      rbacFragments: ['requester_id = $1'],
       rbacParams: [user.userId],
     };
   }
   const teamId = user.teamId;
   if (teamId != null) {
     return {
-      rbacFragments: ['(team_id = ? OR assignee_id = ?)'],
+      rbacFragments: ['(team_id = $1 OR assignee_id = $2)'],
       rbacParams: [teamId, user.userId],
     };
   }
   return {
-    rbacFragments: ['assignee_id = ?'],
+    rbacFragments: ['assignee_id = $1'],
     rbacParams: [user.userId],
   };
 }
 
-export function canAccessTicket(db: Database, user: JwtPayload, ticket: ticketRepo.TicketRow): boolean {
+export function canAccessTicket(_db: PoolClient | null, user: JwtPayload, ticket: ticketRepo.TicketRow): boolean {
+  void _db;
   if (user.role === 'Admin') return true;
   if (user.role === 'EndUser') return ticket.requester_id === user.userId;
   if (user.role === 'IT') {
@@ -38,8 +39,8 @@ export function canAccessTicket(db: Database, user: JwtPayload, ticket: ticketRe
   return false;
 }
 
-export function createTicket(
-  db: Database,
+export async function createTicket(
+  db: PoolClient | null,
   input: {
     title: string;
     description: string;
@@ -53,22 +54,20 @@ export function createTicket(
     team_id?: number | null;
     assignee_id?: number | null;
     ticket_extra_json?: string | null;
-    /** Links Service Request to `service_catalog_items` when raised from catalog */
     catalog_item_id?: number | null;
     status?: string;
     department?: string | null;
-    /** When set (e.g. catalog default), overrides impact×urgency matrix for priority and SLA */
     priority?: Priority;
   },
   requesterId: number,
   requesterDepartment: string | null,
-): ticketRepo.TicketRow {
+): Promise<ticketRepo.TicketRow> {
   const now = new Date().toISOString();
   const priority = input.priority ?? computePriority(input.impact, input.urgency);
   const dueAt = computeDueAtIso(new Date(), priority);
   const status = input.status ?? 'New';
 
-  const id = ticketRepo.insertTicket(db, {
+  const id = await ticketRepo.insertTicket(db, {
     title: input.title,
     description: input.description,
     type: input.type,
@@ -92,9 +91,9 @@ export function createTicket(
   });
 
   const ticketNumber = formatTicketNumber(id);
-  ticketRepo.updateTicketNumber(db, id, ticketNumber);
+  await ticketRepo.updateTicketNumber(db, id, ticketNumber);
 
-  const row = ticketRepo.getTicketById(db, id);
+  const row = await ticketRepo.getTicketById(db, id);
   if (!row) throw new Error('Ticket insert failed');
   return row;
 }
@@ -113,13 +112,13 @@ export interface PatchTicketInput {
   subcategory?: string | null;
 }
 
-export function patchTicket(
-  db: Database,
+export async function patchTicket(
+  db: PoolClient | null,
   ticketId: number,
   patch: PatchTicketInput,
   actor: JwtPayload,
-): ticketRepo.TicketRow {
-  const existing = ticketRepo.getTicketById(db, ticketId);
+): Promise<ticketRepo.TicketRow> {
+  const existing = await ticketRepo.getTicketById(db, ticketId);
   if (!existing) throw new Error('NOT_FOUND');
 
   if (!canAccessTicket(db, actor, existing)) throw new Error('FORBIDDEN');
@@ -133,8 +132,8 @@ export function patchTicket(
         (existing.type === 'Incident' && existing.status === 'Resolved') ||
         (existing.type === 'ServiceRequest' && existing.status === 'Completed');
       if (!ok) throw new Error('BAD_TRANSITION');
-      ticketRepo.patchTicket(db, ticketId, { status: 'Closed', updated_at: now });
-      return ticketRepo.getTicketById(db, ticketId)!;
+      await ticketRepo.patchTicket(db, ticketId, { status: 'Closed', updated_at: now });
+      return (await ticketRepo.getTicketById(db, ticketId))!;
     }
     throw new Error('FORBIDDEN');
   }
@@ -168,13 +167,11 @@ export function patchTicket(
     }
   }
 
-  const teamChanged =
-    patch.team_id !== undefined && patch.team_id !== existing.team_id;
-  const assigneeChanged =
-    patch.assignee_id !== undefined && patch.assignee_id !== existing.assignee_id;
+  const teamChanged = patch.team_id !== undefined && patch.team_id !== existing.team_id;
+  const assigneeChanged = patch.assignee_id !== undefined && patch.assignee_id !== existing.assignee_id;
 
   if (teamChanged || assigneeChanged) {
-    assignRepo.insertAssignment(db, {
+    await assignRepo.insertAssignment(db, {
       ticket_id: ticketId,
       from_user_id: existing.assignee_id,
       to_user_id: patch.assignee_id !== undefined ? patch.assignee_id : existing.assignee_id,
@@ -185,7 +182,7 @@ export function patchTicket(
     });
   }
 
-  ticketRepo.patchTicket(db, ticketId, {
+  await ticketRepo.patchTicket(db, ticketId, {
     ...(patch.status !== undefined ? { status: patch.status } : {}),
     ...(patch.team_id !== undefined ? { team_id: patch.team_id } : {}),
     ...(patch.assignee_id !== undefined ? { assignee_id: patch.assignee_id } : {}),
@@ -208,5 +205,5 @@ export function patchTicket(
     console.warn(`SLA breached ticket ${existing.ticket_number}`);
   }
 
-  return ticketRepo.getTicketById(db, ticketId)!;
+  return (await ticketRepo.getTicketById(db, ticketId))!;
 }

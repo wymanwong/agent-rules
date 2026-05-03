@@ -1,16 +1,18 @@
 import type { Response } from 'express';
-import type { Database } from 'better-sqlite3';
+import type { PoolClient } from 'pg';
 import type { AuthRequest } from '../middleware/auth.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import * as userRepo from '../repositories/userRepository.js';
 import * as teamRepo from '../repositories/teamRepository.js';
 import { hashPassword } from '../services/authService.js';
 import type { UserRole } from '../models/types.js';
+import { emitLive } from '../live/liveHub.js';
 
-export function createAdminController(db: Database) {
+export function createAdminController(_db: PoolClient | null) {
+  void _db;
   return {
-    listUsers: (_req: AuthRequest, res: Response): void => {
-      res.json({ users: userRepo.listUsersSafe(db) });
+    listUsers: async (_req: AuthRequest, res: Response): Promise<void> => {
+      res.json({ users: await userRepo.listUsersSafe(null) });
     },
 
     createUser: async (req: AuthRequest, res: Response): Promise<void> => {
@@ -20,9 +22,9 @@ export function createAdminController(db: Database) {
       const name = String(b.name ?? '');
       const role = b.role as UserRole;
       if (!email || !password || !name || !role) throw new HttpError(400, 'Missing fields');
-      if (userRepo.findUserByEmail(db, email)) throw new HttpError(409, 'Email already exists');
+      if (await userRepo.findUserByEmail(null, email)) throw new HttpError(409, 'Email already exists');
       const now = new Date().toISOString();
-      const id = userRepo.insertUser(db, {
+      const id = await userRepo.insertUser(null, {
         name,
         email,
         department: b.department != null ? String(b.department) : null,
@@ -32,12 +34,13 @@ export function createAdminController(db: Database) {
         created_at: now,
         updated_at: now,
       });
+      emitLive({ type: 'tickets', at: now });
       res.status(201).json({ id });
     },
 
     updateUser: async (req: AuthRequest, res: Response): Promise<void> => {
       const id = Number(req.params.id);
-      const u = userRepo.findUserById(db, id);
+      const u = await userRepo.findUserById(null, id);
       if (!u) throw new HttpError(404, 'User not found');
       const b = req.body as Record<string, unknown>;
       const patch: Parameters<typeof userRepo.updateUser>[2] = {
@@ -50,49 +53,54 @@ export function createAdminController(db: Database) {
       if (b.password !== undefined && String(b.password).length > 0) {
         patch.password_hash = await hashPassword(String(b.password));
       }
-      userRepo.updateUser(db, id, patch);
+      await userRepo.updateUser(null, id, patch);
+      emitLive({ type: 'tickets', at: patch.updated_at! });
       res.json({ ok: true });
     },
 
-    deleteUser: (req: AuthRequest, res: Response): void => {
+    deleteUser: async (req: AuthRequest, res: Response): Promise<void> => {
       const id = Number(req.params.id);
       if (req.user?.userId === id) throw new HttpError(400, 'Cannot delete self');
-      userRepo.deleteUser(db, id);
+      await userRepo.deleteUser(null, id);
+      emitLive({ type: 'tickets', at: new Date().toISOString() });
       res.json({ ok: true });
     },
 
-    listTeams: (_req: AuthRequest, res: Response): void => {
-      res.json({ teams: teamRepo.listTeams(db) });
+    listTeams: async (_req: AuthRequest, res: Response): Promise<void> => {
+      res.json({ teams: await teamRepo.listTeams(null) });
     },
 
-    createTeam: (req: AuthRequest, res: Response): void => {
+    createTeam: async (req: AuthRequest, res: Response): Promise<void> => {
       const b = req.body as Record<string, unknown>;
       const name = String(b.name ?? '');
       if (!name) throw new HttpError(400, 'name required');
       const now = new Date().toISOString();
-      const id = teamRepo.insertTeam(db, {
+      const id = await teamRepo.insertTeam(null, {
         name,
         description: b.description != null ? String(b.description) : null,
         created_at: now,
         updated_at: now,
       });
+      emitLive({ type: 'tickets', at: now });
       res.status(201).json({ id });
     },
 
-    updateTeam: (req: AuthRequest, res: Response): void => {
+    updateTeam: async (req: AuthRequest, res: Response): Promise<void> => {
       const id = Number(req.params.id);
       const b = req.body as Record<string, unknown>;
-      teamRepo.updateTeam(db, id, {
+      await teamRepo.updateTeam(null, id, {
         ...(b.name !== undefined ? { name: String(b.name) } : {}),
         ...(b.description !== undefined ? { description: b.description as string | null } : {}),
         updated_at: new Date().toISOString(),
       });
+      emitLive({ type: 'tickets', at: new Date().toISOString() });
       res.json({ ok: true });
     },
 
-    deleteTeam: (req: AuthRequest, res: Response): void => {
+    deleteTeam: async (req: AuthRequest, res: Response): Promise<void> => {
       const id = Number(req.params.id);
-      teamRepo.deleteTeam(db, id);
+      await teamRepo.deleteTeam(null, id);
+      emitLive({ type: 'tickets', at: new Date().toISOString() });
       res.json({ ok: true });
     },
   };

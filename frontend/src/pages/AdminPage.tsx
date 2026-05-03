@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
+import { useAuth } from '../auth/AuthContext';
 import { KNOWLEDGE_CATEGORY_LABELS } from '../constants/knowledgeCategories';
+import { useLiveEvents } from '../hooks/useLiveEvents';
 
 interface UserRow {
   id: number;
@@ -23,6 +25,7 @@ interface ArticleRow {
 }
 
 export function AdminPage() {
+  const { user } = useAuth();
   const [tab, setTab] = useState<'users' | 'teams' | 'catalog' | 'kb'>('users');
   const [users, setUsers] = useState<UserRow[]>([]);
   const [teams, setTeams] = useState<TeamRow[]>([]);
@@ -47,6 +50,14 @@ export function AdminPage() {
     void refreshTeams().catch(() => {});
     void refreshKb().catch(() => {});
   }, []);
+
+  useLiveEvents(user?.role === 'Admin', (msg) => {
+    if (msg.type === 'tickets' && (tab === 'users' || tab === 'teams')) {
+      void refreshUsers().catch(() => {});
+      void refreshTeams().catch(() => {});
+    }
+    if (msg.type === 'knowledge' && tab === 'kb') void refreshKb().catch(() => {});
+  });
 
   async function seedTeam(name: string) {
     setMsg(null);

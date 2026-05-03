@@ -1,6 +1,6 @@
 import type { Response } from 'express';
 import type { Express } from 'express';
-import type { Database } from 'better-sqlite3';
+import type { PoolClient } from 'pg';
 import type { AuthRequest } from '../middleware/auth.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import * as catalogRepo from '../repositories/catalogRepository.js';
@@ -14,6 +14,8 @@ import {
   normalizeExtraFields,
   parseFormSchemaJsonToExtraFields,
 } from '../services/catalogFormFields.js';
+import { query } from '../db/pg.js';
+import { emitLive } from '../live/liveHub.js';
 
 function deriveCatalogFormColumns(b: Record<string, unknown>): { extra_form_fields_json: string; form_schema_json: string } {
   let raw = b.extra_form_fields;
@@ -46,30 +48,31 @@ function serializeItem(row: catalogRepo.CatalogItemRow) {
   };
 }
 
-export function createCatalogController(db: Database) {
+export function createCatalogController(_db: PoolClient | null) {
+  void _db;
   return {
-    listPublished: (_req: AuthRequest, res: Response): void => {
-      const items = catalogRepo.listPublished(db).map(serializeItem);
+    listPublished: async (_req: AuthRequest, res: Response): Promise<void> => {
+      const items = (await catalogRepo.listPublished(null)).map(serializeItem);
       res.json({ items });
     },
 
-    listAll: (_req: AuthRequest, res: Response): void => {
-      const items = catalogRepo.listAll(db).map(serializeItem);
+    listAll: async (_req: AuthRequest, res: Response): Promise<void> => {
+      const items = (await catalogRepo.listAll(null)).map(serializeItem);
       res.json({ items });
     },
 
-    getById: (req: AuthRequest, res: Response): void => {
+    getById: async (req: AuthRequest, res: Response): Promise<void> => {
       const id = Number(req.params.id);
-      const item = catalogRepo.findById(db, id);
+      const item = await catalogRepo.findById(null, id);
       if (!item) throw new HttpError(404, 'Catalog item not found');
       res.json({ item: serializeItem(item) });
     },
 
-    create: (req: AuthRequest, res: Response): void => {
+    create: async (req: AuthRequest, res: Response): Promise<void> => {
       const b = req.body as Record<string, unknown>;
       const now = new Date().toISOString();
       const { extra_form_fields_json, form_schema_json } = deriveCatalogFormColumns(b);
-      const id = catalogRepo.insertItem(db, {
+      const id = await catalogRepo.insertItem(null, {
         name: String(b.name ?? ''),
         description: String(b.description ?? ''),
         type: String(b.type ?? 'ServiceRequest'),
@@ -85,12 +88,13 @@ export function createCatalogController(db: Database) {
         created_at: now,
         updated_at: now,
       });
+      emitLive({ type: 'catalog', at: now });
       res.status(201).json({ id });
     },
 
-    update: (req: AuthRequest, res: Response): void => {
+    update: async (req: AuthRequest, res: Response): Promise<void> => {
       const id = Number(req.params.id);
-      const existing = catalogRepo.findById(db, id);
+      const existing = await catalogRepo.findById(null, id);
       if (!existing) throw new HttpError(404, 'Catalog item not found');
       const b = req.body as Record<string, unknown>;
       const patch: Partial<Omit<catalogRepo.CatalogItemRow, 'id'>> = { updated_at: new Date().toISOString() };
@@ -108,23 +112,25 @@ export function createCatalogController(db: Database) {
         patch.extra_form_fields_json = derived.extra_form_fields_json;
       }
       if (b.is_published !== undefined) patch.is_published = b.is_published ? 1 : 0;
-      catalogRepo.updateItem(db, id, patch);
+      await catalogRepo.updateItem(null, id, patch);
+      emitLive({ type: 'catalog', at: patch.updated_at! });
       res.json({ ok: true });
     },
 
-    delete: (req: AuthRequest, res: Response): void => {
+    delete: async (req: AuthRequest, res: Response): Promise<void> => {
       const id = Number(req.params.id);
-      catalogRepo.deleteItem(db, id);
+      await catalogRepo.deleteItem(null, id);
+      emitLive({ type: 'catalog', at: new Date().toISOString() });
       res.json({ ok: true });
     },
 
-    requestFromCatalog: (req: AuthRequest, res: Response): void => {
+    requestFromCatalog: async (req: AuthRequest, res: Response): Promise<void> => {
       if (!req.user) throw new HttpError(401, 'Unauthorized');
       const catalogId = Number(req.params.id);
-      const item = catalogRepo.findById(db, catalogId);
+      const item = await catalogRepo.findById(null, catalogId);
       if (!item || item.is_published !== 1) throw new HttpError(404, 'Catalog item not found');
 
-      const requester = userRepo.findUserById(db, req.user.userId);
+      const requester = await userRepo.findUserById(null, req.user.userId);
       const body = req.body as { title?: string; description?: string; extra?: Record<string, unknown> };
 
       const impact = (item.default_impact ?? 'SingleUser') as Impact;
@@ -149,8 +155,8 @@ export function createCatalogController(db: Database) {
           ? (item.default_priority as Priority)
           : undefined;
 
-      const ticket = createTicket(
-        db,
+      const ticket = await createTicket(
+        null,
         {
           title,
           description,
@@ -170,8 +176,8 @@ export function createCatalogController(db: Database) {
       );
 
       if (item.requires_manager_approval === 1) {
-        const approverId = resolveApproverUserId(db, requester);
-        approvalRepo.insertApproval(db, {
+        const approverId = await resolveApproverUserId(requester);
+        await approvalRepo.insertApproval(null, {
           ticket_id: ticket.id,
           approver_user_id: approverId,
           status: 'Pending',
@@ -181,16 +187,17 @@ export function createCatalogController(db: Database) {
         });
       }
 
+      emitLive({ type: 'tickets', ticketId: ticket.id, at: new Date().toISOString() });
       res.status(201).json({ ticket });
     },
 
     requestFromCatalogMultipart: async (req: AuthRequest, res: Response): Promise<void> => {
       if (!req.user) throw new HttpError(401, 'Unauthorized');
       const catalogId = Number(req.params.id);
-      const item = catalogRepo.findById(db, catalogId);
+      const item = await catalogRepo.findById(null, catalogId);
       if (!item || item.is_published !== 1) throw new HttpError(404, 'Catalog item not found');
 
-      const requester = userRepo.findUserById(db, req.user.userId);
+      const requester = await userRepo.findUserById(null, req.user.userId);
       const body = req.body as Record<string, string>;
       const files = (req.files as Express.Multer.File[] | undefined) ?? [];
 
@@ -220,8 +227,8 @@ export function createCatalogController(db: Database) {
           ? (item.default_priority as Priority)
           : undefined;
 
-      const ticket = createTicket(
-        db,
+      const ticket = await createTicket(
+        null,
         {
           title,
           description,
@@ -240,11 +247,11 @@ export function createCatalogController(db: Database) {
         requester?.department ?? null,
       );
 
-      await persistUploadedFiles(db, ticket.id, req.user.userId, files);
+      await persistUploadedFiles(null, ticket.id, req.user.userId, files);
 
       if (item.requires_manager_approval === 1) {
-        const approverId = resolveApproverUserId(db, requester);
-        approvalRepo.insertApproval(db, {
+        const approverId = await resolveApproverUserId(requester);
+        await approvalRepo.insertApproval(null, {
           ticket_id: ticket.id,
           approver_user_id: approverId,
           status: 'Pending',
@@ -254,15 +261,16 @@ export function createCatalogController(db: Database) {
         });
       }
 
+      emitLive({ type: 'tickets', ticketId: ticket.id, at: new Date().toISOString() });
       res.status(201).json({ ticket });
     },
   };
 }
 
-function resolveApproverUserId(db: Database, requester: userRepo.UserRow | undefined): number {
-  const admins = db.prepare(`SELECT id FROM users WHERE role = 'Admin' ORDER BY id LIMIT 1`).get() as { id: number } | undefined;
-  if (admins) return admins.id;
-  const anyIt = db.prepare(`SELECT id FROM users WHERE role = 'IT' ORDER BY id LIMIT 1`).get() as { id: number } | undefined;
-  if (anyIt) return anyIt.id;
+async function resolveApproverUserId(requester: userRepo.UserRow | undefined): Promise<number> {
+  const admins = await query<{ id: number }>(`SELECT id FROM users WHERE role = 'Admin' ORDER BY id LIMIT 1`);
+  if (admins.rows[0]) return admins.rows[0].id;
+  const anyIt = await query<{ id: number }>(`SELECT id FROM users WHERE role = 'IT' ORDER BY id LIMIT 1`);
+  if (anyIt.rows[0]) return anyIt.rows[0].id;
   throw new HttpError(500, 'No approver configured');
 }

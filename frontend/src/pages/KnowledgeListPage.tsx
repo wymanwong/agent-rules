@@ -4,6 +4,7 @@ import { IconBook } from '@tabler/icons-react';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { KNOWLEDGE_CATEGORY_LABELS } from '../constants/knowledgeCategories';
+import { useLiveEvents } from '../hooks/useLiveEvents';
 
 interface Article {
   id: number;
@@ -40,6 +41,10 @@ export function KnowledgeListPage() {
       /* ignore transient errors */
     });
   }, [load]);
+
+  useLiveEvents(Boolean(user), (msg) => {
+    if (msg.type === 'knowledge') void load().catch(() => {});
+  });
 
   return (
     <>
