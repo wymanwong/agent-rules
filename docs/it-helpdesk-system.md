@@ -1,0 +1,74 @@
+# ITIL-Aligned Helpdesk (PostgreSQL + Node + React + Tabler)
+
+This workspace includes a demo internal ticketing stack: Express + TypeScript + **PostgreSQL** (`pg`), and a Vite React portal and IT console styled with **[Tabler](https://github.com/tabler/tabler)** (`@tabler/core`).
+
+## Architecture
+
+- **Backend** (`backend/`): Layered layout under `src/` — `config`, `db`, `repositories`, `services`, `controllers`, `routes`, `middleware`. Connection string **`DATABASE_URL`**. JWT auth; RBAC for `EndUser`, `IT`, `Admin`.
+- **Live updates**: **Server-Sent Events** at `GET /live/stream` (auth via `Authorization: Bearer` or `?token=` for browser `EventSource`). Emits JSON events: `tickets`, `ticket` (with `ticketId`), `knowledge`, `catalog` when data changes.
+- **Frontend** (`frontend/`): React Router; Tabler CSS/JS (`main.tsx`), Bootstrap 5 markup, `@tabler/icons-react`; `/login` and protected routes. Dev server proxies API paths to port 4000.
+- **Priority & SLA**: `backend/src/services/prioritySla.ts` derives `priority` (P1–P4) from impact × urgency and computes `due_at` (P1 +4h, P2 +8h, P3 +3d, P4 +5d).
+- **Workflow**: `backend/src/services/ticketWorkflow.ts` validates incident vs service-request statuses and transitions.
+
+## Setup
+
+1. Install and run **PostgreSQL** and create a database (e.g. `helpdesk`).
+2. Configure `DATABASE_URL` in `backend/.env` (see `backend/.env.example`).
+
+```bash
+cd backend && cp .env.example .env && npm install && npm run db:init -- --force
+cd ../frontend && npm install
+```
+
+`db:init` creates tables if needed and seeds demo users, catalog, and knowledge articles. Use `--force` to drop app tables and re-seed (destructive).
+
+## Attachments & voice
+
+- **Uploads**: Files are stored under `UPLOADS_DIR` (default `./data/uploads`) with metadata in `ticket_attachments`. Max size per file: `MAX_UPLOAD_MB` (default 15).
+- **API**: `POST /tickets/multipart` (fields + optional `attachments[]`), `POST /catalog/items/:id/requests/multipart`, `POST /tickets/:id/attachments/multipart`; download `GET /tickets/:ticketId/attachments/:attachmentId/download` (JWT); delete `DELETE /tickets/:ticketId/attachments/:attachmentId` (requester + IT/Admin may remove).
+- **Portal**: Incident and catalog request forms support **voice-to-text** (Web Speech API — Chrome/Edge/Safari; HTTPS except localhost), **camera / gallery**, and **multi-file** picks.
+
+## Run
+
+Terminal 1:
+
+```bash
+cd backend && npm run dev
+```
+
+Terminal 2:
+
+```bash
+cd frontend && npm run dev
+```
+
+Open http://localhost:5173 — API health: http://localhost:4000/health.
+
+## Demo accounts (after seed)
+
+Password for all: `password123`
+
+- `admin@example.com` — Admin  
+- `it.helpdesk@example.com`, `it.network@example.com`, `it.apps@example.com` — IT (per team)  
+- `user@example.com` — EndUser  
+
+## Knowledge base (rich content & sharing)
+
+- **Body format**: Articles store **`body`** plus **`body_format`**: **`html`** (rich / Word-friendly), **`markdown`**, or **`plain`**. New articles default to **html** in the schema; existing rows without `html` still render as **markdown** when `body_format` is empty or unknown.
+- **Rich editor**: Admins use **TipTap** at `/admin/knowledge/*` with **Rich (Word paste)** — copy/paste from Microsoft Word is supported; content is saved as HTML and **sanitized** on save and on read (headings, lists, tables, links, images; Word `class` attributes stripped).
+- **Images**: Admins upload inline images with **`POST /knowledge/articles/:id/body-images`** (multipart field **`image`**). Files are stored under `UPLOADS_DIR/knowledge/:id/`. Published articles serve images at **`GET /knowledge/articles/:id/images/:filename`** (optional JWT; unpublished images require Admin).
+- **Reading layout**: Article view uses a **narrow reading column** (~48rem) and typography tuned for long-form text (line height, blockquotes, tables).
+- **API limits**: JSON body limit is **5mb** to allow large pasted documents.
+- **Share (browser)**: Article pages offer **Email** (`mailto:` with subject/body), **Microsoft Teams** (opens Teams chat compose with title + link — user picks channel/recipients in Teams), **Copy link**, and **Save** (article IDs in `localStorage` for quick recall).
+
+## Notable API behavior
+
+- **Knowledge GET** `/knowledge/articles` and `/knowledge/articles/:id` are public for published articles; optional JWT unlocks unpublished listing for Admin.
+- **Tickets**: `POST /tickets` creates incidents or requests; ticket number `IT-######` is set after insert.
+- **Catalog**: Admin configures offerings at `/admin/catalog` using plain forms — **extra questions** are rows (label, optional field key, short vs paragraph). Stored as **`extra_form_fields_json`**; API returns **`extra_form_fields`** array on catalog endpoints (legacy **`form_schema_json`** is derived internally for compatibility). **POST** `/catalog/items/:id/requests` creates a service request linked via **`catalog_item_id`**. Ticket detail returns **`catalog_item`** `{ id, name }` when linked.
+
+## Tests
+
+```bash
+cd backend && npm test
+```

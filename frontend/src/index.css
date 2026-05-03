@@ -1,0 +1,153 @@
+/* App tweaks on top of Tabler / Bootstrap */
+
+.page-body {
+  min-height: calc(100vh - 8rem);
+}
+
+.table-responsive-stack {
+  overflow-x: auto;
+}
+
+/* Ticket detail – readable description */
+.ticket-description-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Ticket detail – activity timeline line */
+.ticket-comment-thread > .ticket-comment:not(:last-child) {
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--tblr-border-color-translucent);
+}
+
+/* My Requests – Tabler adds margin-top to .page-header inside .page-wrapper; pull title up */
+.my-requests-page > .page-header {
+  margin-top: 0 !important;
+}
+
+.page-body .container-xl > .my-requests-page {
+  margin-top: -0.75rem;
+}
+
+/* Knowledge base rich content — comfortable reading */
+.kb-article-reading-card {
+  max-width: 48rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+.kb-article-reading.kb-article-body {
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  color: var(--tblr-body-color);
+}
+.kb-article-prose.markdown > *:first-child {
+  margin-top: 0 !important;
+}
+.kb-article-prose.markdown > *:last-child {
+  margin-bottom: 0 !important;
+}
+.kb-article-prose.markdown p {
+  margin-bottom: 1rem;
+}
+.kb-article-prose.markdown h1,
+.kb-article-prose.markdown h2,
+.kb-article-prose.markdown h3,
+.kb-article-prose.markdown h4 {
+  margin-top: 1.75rem;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.kb-article-prose.markdown h1 {
+  font-size: 1.75rem;
+}
+.kb-article-prose.markdown h2 {
+  font-size: 1.4rem;
+}
+.kb-article-prose.markdown h3 {
+  font-size: 1.2rem;
+}
+.kb-article-prose.markdown ul,
+.kb-article-prose.markdown ol {
+  margin-bottom: 1rem;
+  padding-left: 1.5rem;
+}
+.kb-article-prose.markdown li {
+  margin-bottom: 0.35rem;
+}
+.kb-article-prose.markdown blockquote {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid var(--tblr-primary);
+  background: var(--tblr-bg-surface-secondary);
+  color: var(--tblr-secondary);
+}
+.kb-article-prose.markdown img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--tblr-border-radius);
+  margin: 1rem 0;
+}
+.kb-article-prose.markdown pre {
+  overflow-x: auto;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.9em;
+  border-radius: var(--tblr-border-radius);
+  background: var(--tblr-bg-surface-secondary);
+}
+.kb-article-prose.markdown code {
+  font-size: 0.9em;
+  padding: 0.15em 0.4em;
+  border-radius: 0.25rem;
+  background: var(--tblr-bg-surface-secondary);
+}
+.kb-article-prose.markdown pre code {
+  padding: 0;
+  background: transparent;
+}
+.kb-article-prose.markdown table {
+  width: 100%;
+  margin-bottom: 1rem;
+  font-size: 0.95em;
+  border-collapse: collapse;
+}
+.kb-article-prose.markdown th,
+.kb-article-prose.markdown td {
+  border: 1px solid var(--tblr-border-color-translucent);
+  padding: 0.5rem 0.75rem;
+  vertical-align: top;
+}
+.kb-article-prose.markdown th {
+  background: var(--tblr-bg-surface-secondary);
+  font-weight: 600;
+}
+
+/* Admin rich editor — Word paste target */
+.kb-rich-editor .ProseMirror {
+  min-height: 22rem;
+  outline: none;
+}
+.kb-rich-editor .ProseMirror p.is-editor-empty:first-child::before {
+  color: var(--tblr-secondary);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+.kb-rich-editor .ProseMirror table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5rem 0;
+}
+.kb-rich-editor .ProseMirror th,
+.kb-rich-editor .ProseMirror td {
+  border: 1px solid var(--tblr-border-color-translucent);
+  padding: 0.35rem 0.5rem;
+  vertical-align: top;
+}
+.kb-rich-editor .ProseMirror th {
+  background: var(--tblr-bg-surface-secondary);
+  font-weight: 600;
+}
