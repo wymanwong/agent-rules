@@ -149,6 +149,19 @@ This repository uses the `.mdc` (Markdown with Configuration) format, which prov
 
 This unified format means you can use the same rule files in both tools without modification.
 
+## NexusDesk (sample app)
+
+A runnable copy of [NexusDesk](https://github.com/wymanwong/nexusDesk) lives in **`nexusDesk/`**, with fixes for a blank browser page (Vite entry script in `index.html` and JSX-safe `>` in the Mongo guide). To run it locally:
+
+```bash
+cd nexusDesk
+npm install
+cp .env.example .env.local   # then set GEMINI_API_KEY for AI features
+npm run dev
+```
+
+Open **http://localhost:3000**. To re-apply the same edits on a fresh upstream clone, use **`patches/nexusDesk-blank-browser.patch`**.
+
 ## License
 
 MIT License - See [LICENSE](./LICENSE) for details
