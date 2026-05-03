@@ -6,14 +6,20 @@ export interface AuthRequest extends Request {
   user?: JwtPayload;
 }
 
+/** RFC 6750-style Bearer token from Authorization header (case-insensitive scheme). */
+export function parseBearerToken(authorization: string | undefined): string | null {
+  if (typeof authorization !== 'string') return null;
+  const m = /^Bearer\s+(\S+)/i.exec(authorization.trim());
+  return m ? m[1] : null;
+}
+
 export function authenticate(req: AuthRequest, res: Response, next: NextFunction): void {
-  const header = req.headers.authorization;
-  if (!header?.startsWith('Bearer ')) {
+  const token = parseBearerToken(req.headers.authorization);
+  if (!token) {
     res.status(401).json({ error: 'Missing or invalid Authorization header' });
     return;
   }
   try {
-    const token = header.slice(7);
     req.user = verifyToken(token);
     next();
   } catch {
