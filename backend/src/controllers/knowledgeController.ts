@@ -38,8 +38,9 @@ export function createKnowledgeController(_db: PoolClient | null) {
     create: async (req: AuthRequest, res: Response): Promise<void> => {
       const b = req.body as Record<string, unknown>;
       const now = new Date().toISOString();
-      const bodyFormatRaw = b.body_format != null ? String(b.body_format) : 'markdown';
-      const body_format = bodyFormatRaw === 'plain' ? 'plain' : 'markdown';
+      const bodyFormatRaw = b.body_format != null ? String(b.body_format) : 'html';
+      const body_format =
+        bodyFormatRaw === 'plain' ? 'plain' : bodyFormatRaw === 'markdown' ? 'markdown' : 'html';
       const id = await kbRepo.insertArticle(null, {
         title: String(b.title ?? ''),
         body: String(b.body ?? ''),
@@ -66,7 +67,7 @@ export function createKnowledgeController(_db: PoolClient | null) {
       if (b.body !== undefined) patch.body = String(b.body);
       if (b.body_format !== undefined) {
         const f = String(b.body_format);
-        patch.body_format = f === 'plain' ? 'plain' : 'markdown';
+        patch.body_format = f === 'plain' ? 'plain' : f === 'markdown' ? 'markdown' : 'html';
       }
       if (b.category !== undefined) patch.category = b.category as string | null;
       if (b.tags !== undefined) patch.tags = b.tags as string | null;

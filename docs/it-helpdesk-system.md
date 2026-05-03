@@ -54,9 +54,11 @@ Password for all: `password123`
 
 ## Knowledge base (rich content & sharing)
 
-- **Body format**: Articles store **`body`** plus **`body_format`**: `markdown` (default) or `plain`. The portal renders Markdown with **sanitized HTML** (headings, lists, tables, code blocks, images).
+- **Body format**: Articles store **`body`** plus **`body_format`**: **`html`** (rich / Word-friendly), **`markdown`**, or **`plain`**. New articles default to **html** in the schema; existing rows without `html` still render as **markdown** when `body_format` is empty or unknown.
+- **Rich editor**: Admins use **TipTap** at `/admin/knowledge/*` with **Rich (Word paste)** — copy/paste from Microsoft Word is supported; content is saved as HTML and **sanitized** on save and on read (headings, lists, tables, links, images; Word `class` attributes stripped).
 - **Images**: Admins upload inline images with **`POST /knowledge/articles/:id/body-images`** (multipart field **`image`**). Files are stored under `UPLOADS_DIR/knowledge/:id/`. Published articles serve images at **`GET /knowledge/articles/:id/images/:filename`** (optional JWT; unpublished images require Admin).
-- **Admin UI**: `/admin/knowledge/new` and `/admin/knowledge/:id` for full editor, **Insert image** after save, Markdown cheat sheet in UI copy.
+- **Reading layout**: Article view uses a **narrow reading column** (~48rem) and typography tuned for long-form text (line height, blockquotes, tables).
+- **API limits**: JSON body limit is **5mb** to allow large pasted documents.
 - **Share (browser)**: Article pages offer **Email** (`mailto:` with subject/body), **Microsoft Teams** (opens Teams chat compose with title + link — user picks channel/recipients in Teams), **Copy link**, and **Save** (article IDs in `localStorage` for quick recall).
 
 ## Notable API behavior

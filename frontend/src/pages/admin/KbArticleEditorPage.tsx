@@ -2,6 +2,10 @@ import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'reac
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, apiMultipart } from '../../api';
 import { KNOWLEDGE_CATEGORY_LABELS } from '../../constants/knowledgeCategories';
+import { KbRichEditor, type KbRichEditorHandle } from '../../components/KbRichEditor';
+import { bodyToEditorHtml } from '../../knowledge/bodyToEditorHtml';
+import { sanitizeKbHtml } from '../../knowledge/kbHtmlSanitize';
+import { convertBodyForFormatChange } from '../../knowledge/kbFormatSwitch';
 
 interface Article {
   id: number;
@@ -13,26 +17,33 @@ interface Article {
   is_published: number;
 }
 
+type BodyFormat = 'html' | 'markdown' | 'plain';
+
 export function KbArticleEditorPage() {
   const { id: idParam } = useParams();
   const navigate = useNavigate();
   const isNew = idParam === 'new' || !idParam;
   const id = isNew ? null : Number(idParam);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editorRef = useRef<KbRichEditorHandle>(null);
 
   const [title, setTitle] = useState('');
-  const [body, setBody] = useState('');
-  const [bodyFormat, setBodyFormat] = useState<'markdown' | 'plain'>('markdown');
+  const [bodyHtml, setBodyHtml] = useState('<p></p>');
+  const [bodyFormat, setBodyFormat] = useState<BodyFormat>('html');
   const [category, setCategory] = useState<string>(KNOWLEDGE_CATEGORY_LABELS[0] ?? 'General');
   const [tags, setTags] = useState('');
   const [isPublished, setIsPublished] = useState(true);
   const [loading, setLoading] = useState(!isNew);
   const [msg, setMsg] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [editorMountKey, setEditorMountKey] = useState(0);
 
   useEffect(() => {
     if (isNew || !id || Number.isNaN(id)) {
       setLoading(false);
+      setBodyHtml('<p></p>');
+      setBodyFormat('html');
+      setEditorMountKey((k) => k + 1);
       return;
     }
     setLoading(true);
@@ -40,36 +51,17 @@ export function KbArticleEditorPage() {
       .then((r) => {
         const a = r.article;
         setTitle(a.title);
-        setBody(a.body);
-        setBodyFormat(a.body_format === 'plain' ? 'plain' : 'markdown');
+        const fmt = (a.body_format === 'plain' ? 'plain' : a.body_format === 'markdown' ? 'markdown' : 'html') as BodyFormat;
+        setBodyFormat(fmt);
+        setBodyHtml(bodyToEditorHtml(a.body, a.body_format));
         setCategory(a.category || KNOWLEDGE_CATEGORY_LABELS[0] || 'General');
         setTags(a.tags ?? '');
         setIsPublished(a.is_published === 1);
+        setEditorMountKey((k) => k + 1);
       })
       .catch(() => setMsg('Failed to load article'))
       .finally(() => setLoading(false));
   }, [id, isNew]);
-
-  const insertAtCursor = useCallback((snippet: string) => {
-    const ta = document.getElementById('kb-editor-body') as HTMLTextAreaElement | null;
-    if (!ta) {
-      setBody((b) => `${b}${snippet}`);
-      return;
-    }
-    const start = ta.selectionStart ?? ta.value.length;
-    const end = ta.selectionEnd ?? ta.value.length;
-    const next = ta.value.slice(0, start) + snippet + ta.value.slice(end);
-    setBody(next);
-    requestAnimationFrame(() => {
-      ta.focus();
-      const pos = start + snippet.length;
-      ta.setSelectionRange(pos, pos);
-    });
-  }, []);
-
-  const onPickImage = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
 
   const onImageSelected = useCallback(
     async (e: ChangeEvent<HTMLInputElement>) => {
@@ -85,26 +77,26 @@ export function KbArticleEditorPage() {
         const fd = new FormData();
         fd.append('image', file);
         const r = await apiMultipart<{ url: string }>(`/knowledge/articles/${id}/body-images`, fd);
-        const md = bodyFormat === 'markdown' ? `\n\n![](${r.url})\n\n` : `\n${r.url}\n`;
-        insertAtCursor(md);
+        editorRef.current?.insertImage(r.url);
       } catch (err) {
         setMsg(err instanceof Error ? err.message : 'Upload failed');
       } finally {
         setUploading(false);
       }
     },
-    [bodyFormat, id, insertAtCursor, isNew],
+    [id, isNew],
   );
 
   const save = useCallback(async () => {
     setMsg(null);
+    const bodyToSave = bodyFormat === 'html' ? sanitizeKbHtml(bodyHtml) : bodyHtml;
     try {
       if (isNew) {
         const newId = await api<{ id: number }>('/knowledge/articles', {
           method: 'POST',
           json: {
             title: title.trim() || 'Untitled',
-            body,
+            body: bodyToSave,
             body_format: bodyFormat,
             category,
             tags: tags.trim() || null,
@@ -119,7 +111,7 @@ export function KbArticleEditorPage() {
         method: 'PATCH',
         json: {
           title: title.trim() || 'Untitled',
-          body,
+          body: bodyToSave,
           body_format: bodyFormat,
           category,
           tags: tags.trim() || null,
@@ -130,9 +122,11 @@ export function KbArticleEditorPage() {
     } catch (err) {
       setMsg(err instanceof Error ? err.message : 'Save failed');
     }
-  }, [body, bodyFormat, category, id, isNew, isPublished, navigate, tags, title]);
+  }, [bodyFormat, bodyHtml, category, id, isNew, isPublished, navigate, tags, title]);
 
   if (loading) return <div className="text-secondary">Loading…</div>;
+
+  const useRichEditor = bodyFormat === 'html';
 
   return (
     <>
@@ -141,8 +135,8 @@ export function KbArticleEditorPage() {
           <div className="col">
             <h2 className="page-title">{isNew ? 'New knowledge article' : `Edit article #${id}`}</h2>
             <div className="text-secondary small">
-              Use{' '}
-              <strong>Markdown</strong> for headings, lists, bold text, and embedded images. Images are stored when you upload them after the article exists.
+              Choose <strong>Rich (Word)</strong> to copy and paste from Microsoft Word. Use toolbar for headings, lists, and tables. Images: save once, then{' '}
+              <strong>Insert image</strong>.
             </div>
           </div>
           <div className="col-auto">
@@ -162,9 +156,19 @@ export function KbArticleEditorPage() {
               <input type="text" className="form-control" value={title} onChange={(e) => setTitle(e.target.value)} />
             </div>
             <div className="col-md-4">
-              <label className="form-label">Format</label>
-              <select className="form-select" value={bodyFormat} onChange={(e) => setBodyFormat(e.target.value as 'markdown' | 'plain')}>
-                <option value="markdown">Markdown (rich)</option>
+              <label className="form-label">Body format</label>
+              <select
+                className="form-select"
+                value={bodyFormat}
+                onChange={(e) => {
+                  const next = e.target.value as BodyFormat;
+                  setBodyHtml((prevBody) => convertBodyForFormatChange(prevBody, bodyFormat, next));
+                  setBodyFormat(next);
+                  setEditorMountKey((k) => k + 1);
+                }}
+              >
+                <option value="html">Rich (Word paste)</option>
+                <option value="markdown">Markdown (source)</option>
                 <option value="plain">Plain text</option>
               </select>
             </div>
@@ -184,22 +188,34 @@ export function KbArticleEditorPage() {
             </div>
             <div className="col-12">
               <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
-                <label className="form-label mb-0" htmlFor="kb-editor-body">
-                  Body
-                </label>
+                <label className="form-label mb-0">Article body</label>
                 {!isNew && id ? (
                   <>
                     <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" className="d-none" onChange={onImageSelected} />
-                    <button type="button" className="btn btn-sm btn-outline-primary" disabled={uploading || bodyFormat !== 'markdown'} onClick={onPickImage}>
+                    <button type="button" className="btn btn-sm btn-outline-primary" disabled={uploading || !useRichEditor} onClick={() => fileInputRef.current?.click()}>
                       {uploading ? 'Uploading…' : 'Insert image'}
                     </button>
-                    {bodyFormat !== 'markdown' && <span className="text-secondary small">Switch to Markdown to embed images.</span>}
+                    {!useRichEditor && <span className="text-secondary small">Switch to Rich (Word paste) to embed images in the article.</span>}
                   </>
                 ) : (
                   <span className="text-secondary small">Save once to enable image upload.</span>
                 )}
               </div>
-              <textarea id="kb-editor-body" className="form-control font-monospace" rows={18} value={body} onChange={(e) => setBody(e.target.value)} spellCheck />
+              {useRichEditor ? (
+                <KbRichEditor key={editorMountKey} ref={editorRef} valueHtml={bodyHtml} onChangeHtml={setBodyHtml} />
+              ) : (
+                <textarea
+                  id="kb-editor-body"
+                  className="form-control font-monospace"
+                  rows={18}
+                  value={bodyHtml}
+                  onChange={(e) => setBodyHtml(e.target.value)}
+                  spellCheck
+                />
+              )}
+              {bodyFormat === 'markdown' && (
+                <div className="form-hint text-secondary small mt-1">Markdown is saved as typed; preview uses the public article view.</div>
+              )}
             </div>
             <div className="col-12">
               <label className="form-check">

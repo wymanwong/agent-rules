@@ -46,9 +46,9 @@ export function KnowledgeDetailPage() {
           </Link>
         )}
       </div>
-      <div className="card">
-        <div className="card-body kb-article-body">
-          <div className="markdown" dangerouslySetInnerHTML={{ __html: html }} />
+      <div className="card kb-article-reading-card">
+        <div className="card-body kb-article-body kb-article-reading">
+          <div className="markdown kb-article-prose" dangerouslySetInnerHTML={{ __html: html }} />
         </div>
       </div>
     </>

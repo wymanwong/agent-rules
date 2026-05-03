@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS knowledge_articles (
   id SERIAL PRIMARY KEY,
   title TEXT NOT NULL,
   body TEXT NOT NULL,
-  body_format TEXT NOT NULL DEFAULT 'markdown',
+  body_format TEXT NOT NULL DEFAULT 'html',
   category TEXT,
   tags TEXT,
   is_published INTEGER NOT NULL DEFAULT 0,
