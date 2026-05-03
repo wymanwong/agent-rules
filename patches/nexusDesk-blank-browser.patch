@@ -1,0 +1,32 @@
+diff --git a/components/AdminCenter.tsx b/components/AdminCenter.tsx
+index 4b96dc5..f88bcd5 100644
+--- a/components/AdminCenter.tsx
++++ b/components/AdminCenter.tsx
+@@ -341,13 +341,13 @@ const AdminEditor: React.FC<{ section: AdminSection, onBack: () => void, setting
+                       Sign in to <a href="https://cloud.mongodb.com" target="_blank" className="text-emerald-300 underline">cloud.mongodb.com</a> and create a new project. Deploy a free M0 Shared Cluster in your preferred region.
+                     </GuideStep>
+                     <GuideStep number="2" title="Network Access">
+-                      In the Atlas Sidebar, go to <b>Security > Network Access</b>. Click "Add IP Address" and select <b>Allow Access from Anywhere (0.0.0.0/0)</b> for testing, or whitelist your server IP.
++                      In the Atlas Sidebar, go to <b>Security {'>'} Network Access</b>. Click &quot;Add IP Address&quot; and select <b>Allow Access from Anywhere (0.0.0.0/0)</b> for testing, or whitelist your server IP.
+                     </GuideStep>
+                     <GuideStep number="3" title="Create DB User">
+-                      Go to <b>Security > Database Access</b>. Create a user with a secure password and ensure they have the <b>Atlas Admin</b> or <b>Read and Write to any database</b> role.
++                      Go to <b>Security {'>'} Database Access</b>. Create a user with a secure password and ensure they have the <b>Atlas Admin</b> or <b>Read and Write to any database</b> role.
+                     </GuideStep>
+                     <GuideStep number="4" title="Get Connection SRV">
+-                      On your Cluster Dashboard, click <b>Connect > Drivers</b>. Select Node.js and copy the connection string. It should look like: <br/>
++                      On your Cluster Dashboard, click <b>Connect {'>'} Drivers</b>. Select Node.js and copy the connection string. It should look like: <br/>
+                       <code className="text-[10px] bg-emerald-800 p-1.5 rounded mt-2 block font-mono text-emerald-300 truncate">mongodb+srv://user:password@cluster.mongodb.net/</code>
+                     </GuideStep>
+                   </div>
+diff --git a/index.html b/index.html
+index 17ad293..633e3b5 100644
+--- a/index.html
++++ b/index.html
+@@ -33,5 +33,6 @@
+ </head>
+ <body>
+   <div id="root"></div>
++  <script type="module" src="/index.tsx"></script>
+ </body>
+ </html>
