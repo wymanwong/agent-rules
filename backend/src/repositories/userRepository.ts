@@ -34,6 +34,17 @@ export async function listUsersSafe(db: PoolClient | null): Promise<Omit<UserRow
   return mapRows(r.rows as Omit<UserRow, 'password_hash'>[]);
 }
 
+/** IT/Admin users for ticket assignment pickers (no password hash). */
+export async function listAssignableStaff(
+  db: PoolClient | null,
+): Promise<Pick<UserRow, 'id' | 'name' | 'email' | 'team_id'>[]> {
+  void db;
+  const r = await query<Pick<UserRow, 'id' | 'name' | 'email' | 'team_id'>>(
+    `SELECT id, name, email, team_id FROM users WHERE role IN ('IT', 'Admin') ORDER BY name ASC`,
+  );
+  return mapRows(r.rows);
+}
+
 export async function listUsers(db: PoolClient | null): Promise<UserRow[]> {
   void db;
   const r = await query<UserRow>('SELECT * FROM users ORDER BY id');

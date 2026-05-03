@@ -40,6 +40,11 @@ export function registerRoutes(app: Express, _db: PoolClient | null): void {
   api.post('/tickets', asyncHandler(tickets.create.bind(tickets)));
   api.post('/tickets/multipart', uploadAttachmentsMemory(), asyncHandler(tickets.createMultipart.bind(tickets)));
   api.get('/tickets', asyncHandler(tickets.list.bind(tickets)));
+  api.get(
+    '/tickets/assignment-meta',
+    authorize('IT', 'Admin'),
+    asyncHandler(tickets.assignmentMeta.bind(tickets)),
+  );
   api.get('/tickets/:ticketId/attachments/:attachmentId/download', asyncHandler(tickets.downloadAttachment.bind(tickets)));
   api.delete('/tickets/:ticketId/attachments/:attachmentId', asyncHandler(tickets.deleteAttachment.bind(tickets)));
   api.post('/tickets/:id/attachments/multipart', uploadAttachmentsMemory(), asyncHandler(tickets.addAttachmentsMultipart.bind(tickets)));

@@ -21,6 +21,7 @@ import {
 import { VoiceToTextButton } from '../components/VoiceToTextButton';
 import { useAuth } from '../auth/AuthContext';
 import { useLiveEvents } from '../hooks/useLiveEvents';
+import { TicketAssignmentPanel } from '../components/TicketAssignmentPanel';
 
 interface Ticket {
   id: number;
@@ -37,6 +38,8 @@ interface Ticket {
   due_at: string | null;
   created_at: string;
   requester_id: number;
+  team_id: number | null;
+  assignee_id: number | null;
   catalog_item_id: number | null;
 }
 
@@ -408,6 +411,25 @@ export function TicketDetailPage() {
               <div className="ticket-description-body text-body">{ticket.description || '—'}</div>
             </div>
           </div>
+
+          {showInternal && (
+            <div className="card mb-4">
+              <div className="card-header">
+                <h2 className="card-title mb-0 d-flex align-items-center gap-2">
+                  <IconUsersGroup size={20} stroke={1.5} aria-hidden />
+                  Assignment
+                </h2>
+              </div>
+              <div className="card-body">
+                <TicketAssignmentPanel
+                  ticketId={ticket.id}
+                  initialTeamId={ticket.team_id}
+                  initialAssigneeId={ticket.assignee_id}
+                  onSaved={() => void refresh()}
+                />
+              </div>
+            </div>
+          )}
 
           <div className="card mb-4">
             <div className="card-header">

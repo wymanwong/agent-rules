@@ -20,6 +20,7 @@ import { persistUploadedFiles, absoluteAttachmentPath, deleteAttachmentSync } fr
 import type { Impact, TicketType, Urgency } from '../models/types.js';
 import type { Express } from 'express';
 import { emitLive } from '../live/liveHub.js';
+import type { UserRole } from '../models/types.js';
 
 function mapTicketError(e: unknown): never {
   const msg = e instanceof Error ? e.message : String(e);
@@ -43,6 +44,14 @@ function parseMultipartExtra(body: Record<string, string>): Record<string, unkno
 export function createTicketController(_db: PoolClient | null) {
   void _db;
   return {
+    assignmentMeta: async (req: AuthRequest, res: Response): Promise<void> => {
+      if (!req.user) throw new HttpError(401, 'Unauthorized');
+      const role = req.user.role as UserRole;
+      if (role !== 'IT' && role !== 'Admin') throw new HttpError(403, 'Forbidden');
+      const [teams, staff] = await Promise.all([teamRepo.listTeams(null), userRepo.listAssignableStaff(null)]);
+      res.json({ teams, staff });
+    },
+
     createMultipart: async (req: AuthRequest, res: Response): Promise<void> => {
       if (!req.user) throw new HttpError(401, 'Unauthorized');
       const body = req.body as Record<string, string>;

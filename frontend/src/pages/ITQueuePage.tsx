@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthContext';
+import { TicketAssignmentPanel } from '../components/TicketAssignmentPanel';
 import { useLiveEvents } from '../hooks/useLiveEvents';
 
 interface TicketRow {
@@ -12,6 +13,8 @@ interface TicketRow {
   status: string;
   priority: string;
   category: string | null;
+  team_id: number | null;
+  assignee_id: number | null;
   due_at: string | null;
   created_at: string;
 }
@@ -25,6 +28,7 @@ export function ITQueuePage() {
   const [type, setType] = useState('');
   const [category, setCategory] = useState('');
   const [sort, setSort] = useState<'created_at' | 'due_at'>('created_at');
+  const [assignTicket, setAssignTicket] = useState<TicketRow | null>(null);
 
   const load = useCallback(async () => {
     const params = new URLSearchParams({ limit: '100' });
@@ -100,6 +104,7 @@ export function ITQueuePage() {
               <th>Status</th>
               <th>Prio</th>
               <th>Due</th>
+              <th className="w-1" />
             </tr>
           </thead>
           <tbody>
@@ -111,11 +116,53 @@ export function ITQueuePage() {
                 <td>{t.status}</td>
                 <td>{t.priority}</td>
                 <td>{t.due_at ? new Date(t.due_at).toLocaleString() : '—'}</td>
+                <td className="text-end" onClick={(e) => e.stopPropagation()}>
+                  <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => setAssignTicket(t)}>
+                    Assign
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {assignTicket && (
+        <div className="modal modal-blur show d-block" tabIndex={-1} role="dialog" aria-modal="true">
+          <div className="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  Assign {assignTicket.ticket_number}
+                </h5>
+                <button type="button" className="btn-close" aria-label="Close" onClick={() => setAssignTicket(null)} />
+              </div>
+              <div className="modal-body">
+                <p className="text-secondary small mb-3">{assignTicket.title}</p>
+                <TicketAssignmentPanel
+                  ticketId={assignTicket.id}
+                  initialTeamId={assignTicket.team_id}
+                  initialAssigneeId={assignTicket.assignee_id}
+                  compact
+                  onSaved={() => {
+                    void load();
+                    setAssignTicket(null);
+                  }}
+                />
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-link" onClick={() => navigate(`/it/tickets/${assignTicket.id}`)}>
+                  Open ticket
+                </button>
+                <button type="button" className="btn btn-primary" onClick={() => setAssignTicket(null)}>
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {assignTicket && <div className="modal-backdrop show" aria-hidden onClick={() => setAssignTicket(null)} />}
     </>
   );
 }
